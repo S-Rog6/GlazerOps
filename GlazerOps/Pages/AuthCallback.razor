@@ -7,11 +7,27 @@
 @code {
     protected override async Task OnInitializedAsync()
     {
-        // Pull session from persistence / refresh if needed :contentReference[oaicite:3]{index=3}
-        await Sb.Auth.RetrieveSessionAsync();
+        var uri = new Uri(Nav.Uri);
+        var fragment = uri.Fragment.TrimStart('#');
 
-        // If you want to verify:
-        // var session = Sb.Auth.CurrentSession; :contentReference[oaicite:4]{index=4}
+        if (!string.IsNullOrWhiteSpace(fragment))
+        {
+            var tokens = fragment.Split('&')
+                .Select(p => p.Split('=', 2))
+                .Where(p => p.Length == 2)
+                .ToDictionary(p => p[0], p => Uri.UnescapeDataString(p[1]));
+
+            if (tokens.TryGetValue("access_token", out var accessToken) &&
+                tokens.TryGetValue("refresh_token", out var refreshToken))
+            {
+                await Sb.Auth.SetSession(accessToken, refreshToken);
+            }
+        }
+        else
+        {
+            // Fallback: load an existing persisted session (e.g. hard refresh)
+            await Sb.Auth.RetrieveSessionAsync();
+        }
 
         Nav.NavigateTo("/");
     }
