@@ -31,6 +31,18 @@
         <a href="." class="reload">Reload</a>
         <span class="dismiss">🗙</span>
     </div>
+    <script src="js/storageInterop.js"></script>
+    <script>
+        // navigator.permissions.query is a native method that requires this === navigator.permissions.
+        // The Blazor WASM VM dispatches native calls without re-attaching the stored receiver
+        // (p.DO(...p.L) instead of p.DO.call(p.Ax, ...p.L)), so pre-bind query here before
+        // the runtime loads to make every call site work regardless of invocation context.
+        (function () {
+            if (navigator.permissions && typeof navigator.permissions.query === 'function') {
+                navigator.permissions.query = navigator.permissions.query.bind(navigator.permissions);
+            }
+        })();
+    </script>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
     <script>navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });</script>
 </body>

@@ -1,7 +1,48 @@
 ﻿@page "/"
+@using Supabase
+@inject Client Sb
+@inject HttpClient Http
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<h3>Supabase Test</h3>
+<p>@_msg</p>
 
-Welcome to your new app.
+<h3>Current User</h3>
+@if (_user is not null)
+{
+    <p>Email: @_user.Email</p>
+    <p>ID: @_user.Id</p>
+}
+else
+{
+    <p>No user is signed in.</p>
+}
+
+@code {
+    private string _msg = "Loading...";
+    private Supabase.Gotrue.User? _user;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Confirm basic config is reachable by calling Supabase Auth endpoint
+            // This does NOT require you to be logged in.
+            var req = new HttpRequestMessage(HttpMethod.Get, "https://mkcpedfhpiebdggrszrl.supabase.co/auth/v1/settings");
+            req.Headers.Add("apikey", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1rY3BlZGZocGllYmRnZ3JzenJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5Mjc0MzUsImV4cCI6MjA4NzUwMzQzNX0.1fJ7F1BA8d6U83JZGiiJi2yeqEXmvZjUnp619URZ5co");
+
+            var res = await Http.SendAsync(req);
+            var body = await res.Content.ReadAsStringAsync();
+
+            _msg = $"Auth settings status: {(int)res.StatusCode} {res.ReasonPhrase}";
+        }
+        catch (Exception ex)
+        {
+            _msg = ex.ToString();
+        }
+
+        await Sb.Auth.RetrieveSessionAsync();
+        _user = Sb.Auth.CurrentUser;
+    }
+}

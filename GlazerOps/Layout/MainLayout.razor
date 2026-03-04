@@ -1,4 +1,7 @@
 ﻿@inherits LayoutComponentBase
+@inject Supabase.Client Sb
+@inject NavigationManager Nav
+
 <div class="page">
     <div class="sidebar">
         <NavMenu />
@@ -14,3 +17,16 @@
         </article>
     </main>
 </div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await Sb.Auth.RetrieveSessionAsync();
+
+        var path = new Uri(Nav.Uri).AbsolutePath;
+        if (Sb.Auth.CurrentUser is null && path != "/login" && !path.StartsWith("/auth/"))
+        {
+            Nav.NavigateTo("/login");
+        }
+    }
+}

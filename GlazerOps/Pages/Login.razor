@@ -1,0 +1,25 @@
+﻿@page "/login"
+@inject Supabase.Client Sb
+@inject NavigationManager Nav
+
+<h3>Login</h3>
+<button @onclick="LoginGoogle">Login with Google</button>
+
+@code {
+    private async Task LoginGoogle()
+    {
+        var redirectTo = Nav.BaseUri.TrimEnd('/') + "/auth/callback";
+
+        var state = await Sb.Auth.SignIn(
+            Supabase.Gotrue.Constants.Provider.Google,
+            new Supabase.Gotrue.SignInOptions
+            {
+                RedirectTo = redirectTo
+            });
+
+        if (state?.Uri is null)
+            throw new InvalidOperationException("OAuth did not return a redirect URL. Check Supabase provider + redirect allowlist.");
+
+        Nav.NavigateTo(state.Uri.ToString(), forceLoad: true);
+    }
+}
