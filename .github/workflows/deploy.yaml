@@ -31,6 +31,9 @@ jobs:
         run: |
           dotnet publish -c Release -o release -p:StaticWebAssetBasePath=GlazerOps
 
+- name: Disable Jekyll
+  run: touch release/wwwroot/.nojekyll
+  
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
