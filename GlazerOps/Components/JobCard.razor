@@ -1,0 +1,412 @@
+@using GlazerOps.Models
+
+@if (Job is not null)
+{
+    switch (DisplayMode)
+    {
+        case JobViewMode.Cards:
+            <div class="job-card">
+                <button type="button"
+                        class="job-card__button"
+                        aria-expanded="@IsExpanded"
+                        @onclick="OnToggleExpanded">
+                    <div class="job-card__header">
+                        <div class="job-card__left">
+                            <h3 class="job-card__title">@Title</h3>
+                            <div class="job-card__contact">
+                                <span class="job-card__contact-name">@Poc</span>
+                                <span class="job-card__contact-phone">@Phone</span>
+                            </div>
+                        </div>
+                        <div class="job-card__right">
+                            <div class="job-card__location-name">@LocationName</div>
+                            <div class="job-card__address">@AddressLine1</div>
+                            <div class="job-card__city">@AddressLine2</div>
+                        </div>
+                    </div>
+                </button>
+
+                @if (IsExpanded)
+                {
+                    <div class="job-card__details" role="region" aria-label="@Title details">
+                        <div class="job-card__detail-item">
+                            <span class="job-card__detail-label">Job ID:</span>
+                            <span class="job-card__detail-value">@Job.Id</span>
+                        </div>
+                        <div class="job-card__detail-item">
+                            <span class="job-card__detail-label">PO Number:</span>
+                            <span class="job-card__detail-value">@PONum</span>
+                        </div>
+                        <div class="job-card__detail-item">
+                            <span class="job-card__detail-label">Location:</span>
+                            <span class="job-card__detail-value">@LocationName</span>
+                        </div>
+                        <div class="job-card__detail-item">
+                            <span class="job-card__detail-label">Address:</span>
+                            <span class="job-card__detail-value">@AddressLine1 @AddressLine2 @AddressLine3</span>
+                        </div>
+                        <div class="job-card__detail-item">
+                            <span class="job-card__detail-label">Contact:</span>
+                            <span class="job-card__detail-value">@Poc - @Phone</span>
+                        </div>
+                        <a class="job-card__link" href="/job/@Job.Id">Open job</a>
+                    </div>
+                }
+            </div>
+            break;
+
+        case JobViewMode.List:
+            <a class="job-list-item" href="/job/@Job.Id" aria-label="Open job @Title">
+                <div class="job-list-item__left">
+                    <div class="job-list-item__title">@Title</div>
+                    <div class="job-list-item__contact">@Poc</div>
+                    <div class="job-list-item__phone">@Phone</div>
+                </div>
+                <div class="job-list-item__right">
+                    <div class="job-list-item__location">@LocationName</div>
+                    <div class="job-list-item__address">@AddressLine1</div>
+                    <div class="job-list-item__city">@AddressLine2</div>
+                </div>
+            </a>
+            break;
+
+        case JobViewMode.Table:
+            <a class="job-table-row" role="row" href="/job/@Job.Id" aria-label="Open job @Title">
+                <div class="job-table-cell" role="cell">@Title</div>
+                <div class="job-table-cell" role="cell">@PONum</div>
+                <div class="job-table-cell" role="cell">@AddressLine1 @AddressLine2 @AddressLine3</div>
+                <div class="job-table-cell" role="cell">@Poc</div>
+                <div class="job-table-cell" role="cell">@Phone</div>
+            </a>
+            break;
+    }
+}
+
+<style>
+    /* Card View Styles */
+    .job-card {
+        background: #f5f5f5;
+        border: 2px solid #8B0000;
+        border-radius: 8px;
+        overflow: hidden;
+        transition: box-shadow 0.2s ease, transform 0.2s ease;
+        margin-bottom: 16px;
+        width: 100%;
+    }
+
+    .job-card:hover {
+        box-shadow: 0 4px 12px rgba(139, 0, 0, 0.15);
+        transform: translateY(-2px);
+    }
+
+    .job-card__button {
+        border: none;
+        background: transparent;
+        padding: 16px;
+        width: 100%;
+        text-align: left;
+        cursor: pointer;
+        position: relative;
+    }
+
+    .job-card__header {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        align-items: flex-start;
+    }
+
+    .job-card__left {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .job-card__title {
+        margin: 0;
+        font-size: 1.5em;
+        font-weight: 600;
+        color: #8B0000;
+        line-height: 1.2;
+    }
+
+    .job-card__contact {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .job-card__contact-name {
+        font-weight: 500;
+        color: #333;
+        font-size: 0.95em;
+    }
+
+    .job-card__contact-phone {
+        font-family: 'Courier New', monospace;
+        color: #666;
+        font-size: 0.9em;
+    }
+
+    .job-card__right {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        text-align: right;
+    }
+
+    .job-card__location-name {
+        font-weight: 600;
+        color: #333;
+        font-size: 1em;
+    }
+
+    .job-card__address {
+        color: #666;
+        font-size: 0.9em;
+    }
+
+    .job-card__city {
+        font-family: 'Courier New', monospace;
+        color: #999;
+        font-size: 0.85em;
+    }
+
+    .job-card__details {
+        border-top: 1px solid rgba(139, 0, 0, 0.2);
+        padding: 16px;
+        background: #fafafa;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .job-card__detail-item {
+        display: grid;
+        grid-template-columns: 120px 1fr;
+        gap: 12px;
+        align-items: flex-start;
+    }
+
+    .job-card__detail-label {
+        font-weight: 500;
+        color: #666;
+        font-size: 0.9em;
+    }
+
+    .job-card__detail-value {
+        color: #333;
+        word-break: break-word;
+    }
+
+    .job-card__link {
+        margin-top: 8px;
+        padding: 8px 12px;
+        background: #8B0000;
+        color: white;
+        text-decoration: none;
+        border-radius: 4px;
+        font-size: 0.9em;
+        text-align: center;
+        transition: background 0.2s ease;
+        align-self: flex-start;
+    }
+
+    .job-card__link:hover {
+        background: #a00000;
+    }
+
+    /* List View Styles */
+    .job-list-item {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        padding: 16px;
+        background: #f5f5f5;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        margin-bottom: 12px;
+        text-decoration: none;
+        color: inherit;
+        transition: background 0.2s ease;
+    }
+
+    .job-list-item:hover {
+        background: #efefef;
+    }
+
+    .job-list-item__left {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .job-list-item__title {
+        font-weight: 600;
+        color: #8B0000;
+        font-size: 1.1em;
+    }
+
+    .job-list-item__contact {
+        font-weight: 500;
+        color: #333;
+    }
+
+    .job-list-item__phone {
+        font-family: 'Courier New', monospace;
+        color: #666;
+        font-size: 0.9em;
+    }
+
+    .job-list-item__right {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        text-align: right;
+    }
+
+    .job-list-item__location {
+        font-weight: 600;
+        color: #333;
+    }
+
+    .job-list-item__address {
+        color: #666;
+        font-size: 0.9em;
+    }
+
+    .job-list-item__city {
+        font-family: 'Courier New', monospace;
+        color: #999;
+        font-size: 0.85em;
+    }
+
+    /* Table View Styles */
+    .job-table-row {
+        display: grid;
+        grid-template-columns: 1fr 0.8fr 1.5fr 1fr 1fr;
+        gap: 16px;
+        padding: 12px;
+        background: #f5f5f5;
+        border: 1px solid #ddd;
+        text-decoration: none;
+        color: inherit;
+        transition: background 0.2s ease;
+        align-items: center;
+    }
+
+    .job-table-row:hover {
+        background: #efefef;
+    }
+
+    .job-table-cell {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 0.9em;
+    }
+
+    .job-table-cell:first-child {
+        font-weight: 600;
+        color: #8B0000;
+        white-space: normal;
+    }
+
+    @media (max-width: 1024px) {
+        .job-card__header {
+            grid-template-columns: 1fr;
+        }
+
+        .job-card__right {
+            text-align: left;
+        }
+
+        .job-list-item {
+            grid-template-columns: 1fr;
+        }
+
+        .job-list-item__right {
+            text-align: left;
+        }
+
+        .job-table-row {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+@code {
+    [Parameter]
+    public Job? Job { get; set; }
+
+    [Parameter]
+    public JobViewMode DisplayMode { get; set; } = JobViewMode.Cards;
+
+    [Parameter]
+    public bool IsExpanded { get; set; }
+
+    [Parameter]
+    public EventCallback OnToggleExpanded { get; set; }
+
+    private string Title => Job?.JobName ?? string.Empty;
+
+    private string PONum => Job?.PONumber ?? string.Empty;
+
+    private string Poc => Job?.Contacts?.FirstOrDefault(c => c.IsCurrent)?.Name 
+                       ?? Job?.Contacts?.FirstOrDefault()?.Name 
+                       ?? string.Empty;
+
+    private string Phone => Job?.Contacts?.FirstOrDefault(c => c.IsCurrent)?.Phone 
+                         ?? Job?.Contacts?.FirstOrDefault()?.Phone 
+                         ?? string.Empty;
+
+    private string LocationName => Job?.Site?.SiteName ?? string.Empty;
+
+    private string Location => Job?.Site?.Address ?? string.Empty;
+
+    private (string Line1, string Line2, string Line3) AddressInfo
+    {
+        get
+        {
+            if (Job is null) return ("", "", "");
+
+            var (line1, line2, line3) = SplitLocation(Location);
+            var hasSplitLocation = !(string.IsNullOrWhiteSpace(line1) && string.IsNullOrWhiteSpace(line2) && string.IsNullOrWhiteSpace(line3))
+                && !string.IsNullOrWhiteSpace(Location)
+                && LocationIsSplittable(Location);
+
+            return hasSplitLocation 
+                ? (line1, line2, line3)
+                : (Location, string.Empty, string.Empty);
+        }
+    }
+
+    private string AddressLine1 => AddressInfo.Line1;
+    private string AddressLine2 => AddressInfo.Line2;
+    private string AddressLine3 => AddressInfo.Line3;
+
+    private static bool LocationIsSplittable(string? location)
+    {
+        if (string.IsNullOrWhiteSpace(location)) return false;
+        return location.Contains('\n') || location.Contains("<br", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static (string Line1, string Line2, string Line3) SplitLocation(string? location)
+    {
+        if (!LocationIsSplittable(location)) return ("", "", "");
+
+        var normalized = location!
+            .Replace("<br />", "\n", StringComparison.OrdinalIgnoreCase)
+            .Replace("<br/>", "\n", StringComparison.OrdinalIgnoreCase)
+            .Replace("<br>", "\n", StringComparison.OrdinalIgnoreCase)
+            .Replace("\r\n", "\n", StringComparison.Ordinal);
+
+        var parts = normalized
+            .Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+
+        return (
+            parts.ElementAtOrDefault(0) ?? "",
+            parts.ElementAtOrDefault(1) ?? "",
+            parts.ElementAtOrDefault(2) ?? "");
+    }
+}

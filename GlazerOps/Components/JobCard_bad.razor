@@ -1,0 +1,294 @@
+﻿@using GlazerOps.Models
+
+@if (Job is not null)
+{
+    switch (DisplayMode)
+    {
+        case JobViewMode.Cards:
+            <div class="jl__cardWrap">
+                <button type="button"
+                        class="jl__card"
+                        aria-expanded="@IsExpanded"
+                        @onclick="OnToggleExpanded">
+                    <span class="jl__cardChevron" aria-hidden="true"></span>
+                    <div class="jl__cardContent">
+                        @RowContent
+                    </div>
+                </button>
+
+                @if (IsExpanded)
+                {
+                    <div class="jl__cardDetails" role="region" aria-label="@Title details">
+                        <div class="jl__cardDetailRow">
+                            <div class="jl__cardDetailLabel">Name</div>
+                            <div class="jl__cardDetailValue">@Title</div>
+                        </div>
+                        <div class="jl__cardDetailRow">
+                            <div class="jl__cardDetailLabel">PO</div>
+                            <div class="jl__cardDetailValue">@PONum</div>
+                        </div>
+                        <div class="jl__cardDetailRow">
+                            <div class="jl__cardDetailLabel">Location</div>
+                            <div class="jl__cardDetailValue">@AddressLine1 @AddressLine2 @AddressLine3</div>
+                        </div>
+                        <div class="jl__cardDetailRow">
+                            <div class="jl__cardDetailLabel">POC</div>
+                            <div class="jl__cardDetailValue">@Poc</div>
+                        </div>
+                        <div class="jl__cardDetailRow">
+                            <div class="jl__cardDetailLabel">Phone</div>
+                            <div class="jl__cardDetailValue jl__jobMono">@Phone</div>
+                        </div>
+
+                        <a class="jl__cardOpen" href="/job/@Job.Id">Open job</a>
+                    </div>
+                }
+            </div>
+            break;
+
+        case JobViewMode.List:
+            <a class="jl__row" href="/job/@Job.Id" aria-label="Open job @Title">
+                @RowContent
+            </a>
+            break;
+
+        case JobViewMode.Table:
+            <a class="jl__tableRow" role="row" href="/job/@Job.Id" aria-label="Open job @Title">
+                <div class="jl__tableCell" role="cell">@Title</div>
+                <div class="jl__tableCell" role="cell">@PONum</div>
+                <div class="jl__tableCell" role="cell">@AddressLine1 @AddressLine2 @AddressLine3</div>
+                <div class="jl__tableCell" role="cell">@Poc</div>
+                <div class="jl__tableCell jl__jobMono" role="cell">@Phone</div>
+            </a>
+            break;
+    }
+}
+
+@code {
+    [Parameter]
+    public Job? Job { get; set; }
+
+    [Parameter]
+    public JobViewMode DisplayMode { get; set; } = JobViewMode.Cards;
+
+    [Parameter]
+    public bool IsExpanded { get; set; }
+
+    [Parameter]
+    public EventCallback OnToggleExpanded { get; set; }
+
+    [Parameter]
+    public EventCallback OnClick { get; set; }
+
+    private string Title => Job?.JobName ?? string.Empty;
+
+    private string PONum => Job?.PONumber ?? string.Empty;
+
+    private string Poc => Job?.Contacts?.FirstOrDefault(c => c.IsCurrent)?.Name 
+                       ?? Job?.Contacts?.FirstOrDefault()?.Name 
+                       ?? string.Empty;
+
+    private string Phone => Job?.Contacts?.FirstOrDefault(c => c.IsCurrent)?.Phone 
+                         ?? Job?.Contacts?.FirstOrDefault()?.Phone 
+                         ?? string.Empty;
+
+    private string Location => Job?.Site?.Address ?? string.Empty;
+
+    private (string Line1, string Line2, string Line3) AddressInfo
+    {
+        get
+        {
+            if (Job is null) return ("", "", "");
+
+            var (line1, line2, line3) = SplitLocation(Location);
+            var hasSplitLocation = !(string.IsNullOrWhiteSpace(line1) && string.IsNullOrWhiteSpace(line2) && string.IsNullOrWhiteSpace(line3))
+                && !string.IsNullOrWhiteSpace(Location)
+                && LocationIsSplittable(Location);
+
+            return hasSplitLocation 
+                ? (line1, line2, line3)
+                : (Location, string.Empty, string.Empty);
+        }
+    }
+
+    private string AddressLine1 => AddressInfo.Line1;
+    private string AddressLine2 => AddressInfo.Line2;
+    private string AddressLine3 => AddressInfo.Line3;
+
+    private RenderFragment RowContent => __builder =>
+    {
+        <div class="jl__rowLeft">
+            <div class="jl__jobTitle">@(string.IsNullOrWhiteSpace(Title) ? "Unnamed Job" : Title)</div>
+            @if (!string.IsNullOrWhiteSpace(PONum))
+            {
+                <div class="jl__jobSub">PO: @PONum</div>
+            }
+            @if (!string.IsNullOrWhiteSpace(Poc) || !string.IsNullOrWhiteSpace(Phone))
+            {
+                <div class="jl__jobSub jl__jobMono">👥 @Poc @Phone</div>
+            }
+        </div>
+        <div class="jl__rowRight">
+            @if (!string.IsNullOrWhiteSpace(AddressLine1))
+            {
+                <div class="jl__jobAddrTitle">📍 @AddressLine1</div>
+            }
+            <div class="jl__jobAddr">@AddressLine2</div>
+            <div class="jl__jobAddr jl__jobMono">@AddressLine3</div>
+        </div>
+    };
+
+    private static bool LocationIsSplittable(string? location)
+    {
+        if (string.IsNullOrWhiteSpace(location)) return false;
+        return location.Contains('\n') || location.Contains("<br", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static (string Line1, string Line2, string Line3) SplitLocation(string? location)
+    {
+        if (!LocationIsSplittable(location)) return ("", "", "");
+
+        var normalized = location!
+            .Replace("<br />", "\n", StringComparison.OrdinalIgnoreCase)
+            .Replace("<br/>", "\n", StringComparison.OrdinalIgnoreCase)
+            .Replace("<br>", "\n", StringComparison.OrdinalIgnoreCase)
+            .Replace("\r\n", "\n", StringComparison.Ordinal);
+
+        var parts = normalized
+            .Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+
+        return (
+            parts.ElementAtOrDefault(0) ?? "",
+            parts.ElementAtOrDefault(1) ?? "",
+            parts.ElementAtOrDefault(2) ?? "");
+    }
+}
+
+<style>
+    .jl__cardWrap {
+        background: #fff;
+        border: 2px solid #8B0000;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        display: block;
+        transition: box-shadow 0.2s ease, transform 0.2s ease;
+        margin-bottom: 16px;
+        width: 100%;
+    }
+    .jl__cardWrap:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+        transform: translateY(-2px);
+    }
+    .jl__card {
+        border: none;
+        background: transparent;
+        padding: 16px;
+        width: 100%;
+        text-align: left;
+        display: inline-block;
+        cursor: pointer;
+        position: relative;
+        gap: 16px;
+    }
+    .jl__cardChevron {
+        display: none;
+    }
+    .jl__card[aria-expanded="True"] .jl__cardChevron,
+    .jl__card[aria-expanded="true"] .jl__cardChevron {
+        display: none;
+    }
+    .jl__cardContent {
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+        gap: 16px;
+        align-items: flex-start;
+    }
+    .jl__rowLeft, .jl__rowRight {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .jl__rowLeft {
+        flex: 1.5;
+        padding-right: 0;
+    }
+    .jl__rowRight {
+        flex: 1;
+        text-align: right;
+        padding-right: 0;
+    }
+    .jl__jobTitle {
+        font-weight: 700;
+        font-size: 1em;
+        color: #8B0000;
+        margin-bottom: 2px;
+    }
+    .jl__jobSub, .jl__jobAddr {
+        font-size: 0.85em;
+        color: #333;
+        font-weight: 600;
+    }
+    .jl__jobAddrTitle {
+        font-weight: 600;
+        font-size: 0.9em;
+        color: #333;
+    }
+    .jl__jobMono {
+        color: #555;
+        font-size: 0.85em;
+    }
+    .jl__cardDetails {
+        display: none;
+    }
+
+    .jl__row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 16px;
+        text-decoration: none;
+        background: #fff;
+        border: 2px solid #8B0000;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        color: inherit;
+        transition: background 0.2s;
+        width: 100%;
+        gap: 16px;
+    }
+    .jl__row:hover {
+        background: #fafafa;
+        text-decoration: none;
+        color: inherit;
+    }
+    .jl__row .jl__rowRight {
+        padding-right: 0;
+    }
+
+    .jl__tableRow {
+        display: flex;
+        text-decoration: none;
+        color: inherit;
+        background: #fff;
+        border: 2px solid #8B0000;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        transition: background 0.2s;
+        width: 100%;
+        align-items: center;
+    }
+    .jl__tableRow:hover {
+        background: #fafafa;
+        text-decoration: none;
+        color: inherit;
+    }
+    .jl__tableCell {
+        display: flex;
+        flex: 1;
+        padding: 12px 16px;
+        vertical-align: middle;
+        font-size: 0.9em;
+        word-break: break-word;
+    }
+</style>

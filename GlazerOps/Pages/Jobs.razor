@@ -1,0 +1,72 @@
+﻿@page "/jobs"
+@using Supabase
+@using GlazerOps.Components
+@using GlazerOps.Models
+@inject Client Sb
+@inject HttpClient Http
+
+<PageTitle>Jobs</PageTitle>
+
+<CardDisplayArea TItem="Job" 
+                 Title="Jobs" 
+                 Items="jobs" 
+                 IsLoading="isLoading"
+                 FilterFunc="FilterJobs">
+    <ChildContent Context="job">
+        <JobCard Job="job" />
+    </ChildContent>
+</CardDisplayArea>
+
+@code {
+    private List<Job> jobs = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadJobs();
+    }
+
+    private async Task LoadJobs()
+    {
+        try
+        {
+            isLoading = true;
+            
+            // Fetch jobs from Supabase
+            var response = await Sb.From<Job>()
+                .Select("*, site:sites(*)")
+                .Get();
+
+            jobs = response.Models;
+            
+            // Optionally load related data for each job
+            foreach (var job in jobs)
+            {
+                // You could fetch contacts, schedule dates, and notes here if needed
+                // For now, we'll just use the basic job data with the site
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading jobs: {ex.Message}");
+            jobs = new List<Job>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private bool FilterJobs(Job job, string filter)
+    {
+        if (string.IsNullOrWhiteSpace(filter))
+            return true;
+
+        var searchText = filter.ToLower();
+        
+        return job.JobName.ToLower().Contains(searchText) ||
+               job.PONumber.ToLower().Contains(searchText) ||
+               (job.Site?.SiteName?.ToLower().Contains(searchText) ?? false) ||
+               (job.Assigned?.ToLower().Contains(searchText) ?? false);
+    }
+}

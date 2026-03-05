@@ -1,0 +1,114 @@
+﻿@using MudBlazor
+@using MudBlazor.Components
+@using GlazerOps.Components
+@using GlazerOps.Models
+@typeparam TItem
+
+<MudPaper Class="cda">
+    <div class="cda-header">
+        <h3>@Title</h3>
+    </div>
+    
+    <div class="cda-content">
+        @if (IsLoading)
+        {
+            <div class="loading-container">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                <p>Loading...</p>
+            </div>
+        }
+        else if (FilteredItems == null || !FilteredItems.Any())
+        {
+            <div class="empty-state">
+                <p>No items to display</p>
+            </div>
+        }
+        else
+        {
+            <div class="cards-grid">
+                @foreach (var item in FilteredItems)
+                {
+                    @ChildContent(item)
+                }
+            </div>
+        }
+    </div>
+</MudPaper>
+
+<style>
+    .cda {
+        border-radius: 8px;
+        border: 2px solid #8B0000;
+        backdrop-filter: blur(4px);
+        min-height: 300px;
+        width: 100%;
+        margin: 16px;
+        display: inline-block
+    }
+
+    .cda-header {
+        padding: 16px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    .cda-header h3 {
+        margin: 0;
+        font-size: 1.5em;
+        color: darkred;
+    }
+
+    .cda-content {
+        flex: 1;
+        padding: 16px;
+
+    }
+
+    .cards-grid {
+        display: inline-block;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 16px;
+    }
+
+    .loading-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 200px;
+        gap: 16px;
+    }
+
+    .empty-state {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 200px;
+        color: #999;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string CardFilter { get; set; } = string.Empty;
+
+    [Parameter]
+    public IEnumerable<TItem>? Items { get; set; }
+
+    [Parameter]
+    public RenderFragment<TItem> ChildContent { get; set; } = null!;
+
+    [Parameter]
+    public Func<TItem, string, bool>? FilterFunc { get; set; }
+
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    private IEnumerable<TItem>? FilteredItems =>
+        Items == null ? null :
+        string.IsNullOrWhiteSpace(CardFilter) ? Items :
+        FilterFunc != null ? Items.Where(item => FilterFunc(item, CardFilter)) :
+        Items;
+}

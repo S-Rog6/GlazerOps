@@ -1,14 +1,23 @@
+
+
 .navbar-toggler {
     background-color: rgba(255, 255, 255, 0.1);
 }
 
 .top-row {
     min-height: 3.5rem;
-    background-color: rgba(0,0,0,0.4);
+    border-bottom: 1px solid rgba(255, 80, 80, 0.22);
 }
 
-.navbar-brand {
-    font-size: 1.1rem;
+.navbar-brand {     
+    padding: 0px;
+}
+
+.navbar-brand img {
+     align-content: center;
+     display: flow-root;
+     width: 80%;
+    max-width: 200px;
 }
 
 .bi {
@@ -34,7 +43,8 @@
 }
 
 .nav-item {
-    font-size: 0.9rem;
+    font-size: 1.2rem;
+    
     padding-bottom: 0.5rem;
 }
 
@@ -47,7 +57,7 @@
     }
 
     .nav-item ::deep a {
-        color: #d7d7d7;
+        color: #d9adad;
         border-radius: 4px;
         height: 3rem;
         display: flex;
@@ -61,8 +71,12 @@
 }
 
 .nav-item ::deep a:hover {
-    background-color: rgba(255,255,255,0.1);
-    color: white;
+    background-color: rgba(255,255,255,0.67);
+    color: lightgrey;
+}
+
+.nav-scrollable {
+
 }
 
 @media (min-width: 641px) {

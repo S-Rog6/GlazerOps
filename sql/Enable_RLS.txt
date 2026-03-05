@@ -1,0 +1,6 @@
+alter table public.sites enable row level security;
+alter table public.jobs enable row level security;
+alter table public.job_schedule_dates enable row level security;
+alter table public.job_notes enable row level security;
+alter table public.site_contacts enable row level security;
+alter table public.job_contacts enable row level security;
