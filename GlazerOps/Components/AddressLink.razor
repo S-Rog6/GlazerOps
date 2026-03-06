@@ -1,0 +1,79 @@
+﻿@using Microsoft.AspNetCore.Components;
+@inherits ComponentBase
+
+<!-- Address link component that opens Google Maps with the full address -->
+<a href="@MapsUrl" target="_blank" class="address-link" @onclick:stopPropagation="true" @onmousedown:stopPropagation="true">
+    <div class="address-container">
+        <div class="address-name">@BuildingName</div>
+        <div class="address-line">@AddressLine1</div>
+        <div class="address-line">@AddressLine2</div>
+    </div>
+</a>
+
+<style>
+    /* Address Link Component - clickable address that opens Google Maps */
+    .address-link {
+        color: darkred;
+        text-decoration: none;
+        transition: color 0.2s;
+        user-select: text;
+        cursor: text;
+    }
+
+        .address-link:hover {
+            color: red;
+            cursor: pointer;
+        }
+
+            .address-link:hover .address-line {
+                text-decoration: underline;
+            }
+
+    .address-container {
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+    }
+
+    .address-name {
+        font-weight: bold;
+        font-size: 1.1em;
+    }
+
+    .address-line {
+        font-size: 1em;
+        color: black;
+        display: block;
+    }
+</style>
+
+@code {
+    // Component parameters for address parts
+    [Parameter]
+    public string? BuildingName { get; set; }
+
+    [Parameter]
+    public string? AddressLine1 { get; set; }
+
+    [Parameter]
+    public string? AddressLine2 { get; set; }
+
+    [Parameter]
+    public string? FullAddress { get; set; }
+
+    /// <summary>
+    /// Generates a Google Maps search URL for the full address.
+    /// </summary>
+    private string MapsUrl
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(FullAddress))
+                return "#";
+
+            // Create Google Maps search URL
+            var encodedAddress = System.Net.WebUtility.UrlEncode(FullAddress);
+            return $"https://www.google.com/maps/search/?api=1&query={encodedAddress}";
+        }
+    }
+}

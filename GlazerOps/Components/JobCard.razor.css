@@ -1,0 +1,167 @@
+.jobitem {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    background: #f7f7f7;
+    border: 1px solid maroon;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin: 0 0 12px 0;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    box-sizing: border-box;
+}
+
+.jobitem:hover {
+    background: #ececec;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+    transform: translateY(-1px);
+}
+
+.ji_leftside {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: left;
+}
+
+.ji_rightside {
+    flex: 0 0 260px;
+    min-width: 200px;
+    text-align: right;
+    align-self: stretch;
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-start;
+}
+
+.ji_header {
+    margin-bottom: 6px;
+}
+
+.ji_joblink {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+    text-decoration: none;
+    max-width: 100%;
+}
+
+.ji_joblink:hover .ji_jobname {
+    text-decoration: underline;
+}
+
+.ji_jobname {
+    margin: 0;
+    color: darkred;
+    text-shadow: 1px 1px 2px #120000;
+    font-size: 1.2rem;
+    font-weight: 700;
+    line-height: 1.2;
+    word-break: break-word;
+}
+
+.ji_po {
+    color: #222;
+    font-size: 0.92rem;
+    white-space: nowrap;
+}
+
+.ji_info {
+    margin: 0.35rem 0 0;
+    color: #111;
+    font-size: 0.98rem;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.ji_name {
+    font-weight: 700;
+}
+
+.ji_notes {
+    margin-top: 10px;
+}
+
+.ji_notes_toggle {
+    appearance: none;
+    border: 1px solid #9a9a9a;
+    border-radius: 6px;
+    background: #e6e6e6;
+    color: #111;
+    padding: 6px 12px;
+    font-size: 0.92rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.ji_notes_toggle:hover {
+    background: #d8d8d8;
+    border-color: #7f7f7f;
+}
+
+.ji_notes_toggle:focus-visible {
+    outline: 2px solid maroon;
+    outline-offset: 2px;
+}
+
+.ji_notes_content {
+    margin-top: 8px;
+    padding: 10px 12px;
+    background: #ffffff;
+    border: 1px solid #cccccc;
+    border-radius: 6px;
+    color: #333;
+    font-size: 0.95rem;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* Temporary debug block if you use one */
+.ji_debug {
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: #f1f1f1;
+    border: 1px dashed #aaa;
+    border-radius: 4px;
+    color: #333;
+    font-size: 0.78rem;
+    line-height: 1.35;
+}
+
+/* Tablet */
+@media (max-width: 900px) {
+    .jobitem {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .ji_rightside {
+        flex: 1 1 auto;
+        min-width: 0;
+        width: 100%;
+        text-align: left;
+        justify-content: flex-start;
+        margin-top: 10px;
+    }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+    .jobitem {
+        padding: 10px 12px;
+        border-radius: 6px;
+    }
+
+    .ji_jobname {
+        font-size: 1.05rem;
+    }
+
+    .ji_po,
+    .ji_info,
+    .ji_notes_toggle,
+    .ji_notes_content {
+        font-size: 0.9rem;
+    }
+}

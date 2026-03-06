@@ -3,13 +3,17 @@
 @using GlazerOps.Components
 @using GlazerOps.Models
 @inject Client Sb
-@inject HttpClient Http
 
 <PageTitle>Jobs</PageTitle>
 
-<CardDisplayArea TItem="Job" 
-                 Title="Jobs" 
-                 Items="jobs" 
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+<CardDisplayArea TItem="Job"
+                 Title="Jobs"
+                 Items="jobs"
                  IsLoading="isLoading"
                  FilterFunc="FilterJobs">
     <ChildContent Context="job">
@@ -19,36 +23,31 @@
 
 @code {
     private List<Job> jobs = new();
-    private bool isLoading = true;
+    private bool isLoading;
+    private string? errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadJobs();
+        await LoadJobsAsync();
     }
 
-    private async Task LoadJobs()
+    private async Task LoadJobsAsync()
     {
+        isLoading = true;
+        errorMessage = null;
+
         try
         {
-            isLoading = true;
-            
-            // Fetch jobs from Supabase
             var response = await Sb.From<Job>()
-                .Select("*, site:sites(*)")
+                .Select("*, site:sites(*), contacts:job_contacts(*), scheduled_dates:job_schedule_dates(*), notes:job_notes(*)")
                 .Get();
 
-            jobs = response.Models;
-            
-            // Optionally load related data for each job
-            foreach (var job in jobs)
-            {
-                // You could fetch contacts, schedule dates, and notes here if needed
-                // For now, we'll just use the basic job data with the site
-            }
+            jobs = response?.Models ?? new List<Job>();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading jobs: {ex.Message}");
+            errorMessage = "Failed to load jobs.";
+            Console.Error.WriteLine(ex);
             jobs = new List<Job>();
         }
         finally
@@ -57,16 +56,25 @@
         }
     }
 
-    private bool FilterJobs(Job job, string filter)
+    private static bool FilterJobs(Job? job, string? filter)
     {
+        if (job is null)
+            return false;
+
         if (string.IsNullOrWhiteSpace(filter))
             return true;
 
-        var searchText = filter.ToLower();
-        
-        return job.JobName.ToLower().Contains(searchText) ||
-               job.PONumber.ToLower().Contains(searchText) ||
-               (job.Site?.SiteName?.ToLower().Contains(searchText) ?? false) ||
-               (job.Assigned?.ToLower().Contains(searchText) ?? false);
+        var search = filter.Trim();
+
+        return Contains(job.JobName, search)
+            || Contains(job.PONumber?.ToString(), search)
+            || Contains(job.Site?.SiteName, search)
+            || Contains(job.Assigned, search)
+            || Contains(job.Contacts?.FirstOrDefault(c => c.IsCurrent)?.Name, search)
+            || Contains(job.Notes?.FirstOrDefault(n => n.Pinned)?.Note, search);
     }
+
+    private static bool Contains(string? source, string value) =>
+        !string.IsNullOrWhiteSpace(source) &&
+        source.Contains(value, StringComparison.OrdinalIgnoreCase);
 }

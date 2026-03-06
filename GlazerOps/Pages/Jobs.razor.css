@@ -1,0 +1,35 @@
+:deep(.carddisplayarea),
+:deep(.card-display-area),
+:deep(.card-area) {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+:deep(.cda_outer),
+:deep(.cda_container),
+:deep(.cda_card),
+:deep(.carddisplayarea-shell),
+:deep(.carddisplayarea-body) {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+:deep(.cda_items),
+:deep(.carddisplayarea-items),
+:deep(.card-list),
+:deep(.items-container) {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+:deep(.jobitem) {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.alert {
+    margin: 0 0 12px 0;
+}

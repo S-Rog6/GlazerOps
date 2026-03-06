@@ -1,0 +1,34 @@
+﻿@using Microsoft.AspNetCore.Components;
+@inherits ComponentBase
+
+<!-- Phone number link component that triggers phone dialer on click -->
+<a href="tel:@PhoneNumber" class="phone-link" @onclick:stopPropagation="true" @onmousedown:stopPropagation="true">
+    @PhoneNumber
+</a>
+
+<style>
+    /* Phone Link Component - clickable phone number */
+    .phone-link {
+        color: darkred;
+        text-decoration: none;
+        transition: color 0.2s;
+        user-select: text;
+        cursor: text;
+    }
+
+        .phone-link:hover {
+            color: red;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+</style>
+
+
+@code {
+    /// <summary>
+    /// Phone number to display and link.
+    /// </summary>
+    [Parameter]
+    public string? PhoneNumber { get; set; }
+}
+
