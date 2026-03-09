@@ -1,23 +1,14 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 using Supabase.Postgrest.Attributes;
 using Supabase.Postgrest.Models;
 
-namespace GlazerOps.Models
+namespace GlazerOps.Models.Data
 {
     /// <summary>
-    /// DEPRECATED: Use GlazerOps.Models.Data.JobData for Supabase operations
-    /// and GlazerOps.Models.Domain.Job for business logic.
-    /// 
-    /// This file is kept for backward compatibility only.
-    /// New code should import from the appropriate namespace:
-    /// - For database operations: GlazerOps.Models.Data
-    /// - For domain logic: GlazerOps.Models.Domain
+    /// Data model for Supabase persistence. Internal use only.
     /// </summary>
-
-    // Backward compatibility aliases - redirect to new locations
-    [System.Obsolete("Use GlazerOps.Models.Data.JobData instead", false)]
     [Table("jobs")]
-    public class Job : BaseModel
+    public class JobData : BaseModel
     {
         [JsonPropertyName("id")]
         [PrimaryKey("id", false)]
@@ -39,21 +30,20 @@ namespace GlazerOps.Models
         public string? Assigned { get; set; }
 
         [JsonPropertyName("site")]
-        public Site? Site { get; set; }
+        public SiteData? Site { get; set; }
 
         [JsonPropertyName("contacts")]
-        public JobContact[] Contacts { get; set; } = Array.Empty<JobContact>();
+        public JobContactData[] Contacts { get; set; } = Array.Empty<JobContactData>();
 
         [JsonPropertyName("scheduled_dates")]
-        public JobScheduleDate[] ScheduledDates { get; set; } = Array.Empty<JobScheduleDate>();
+        public JobScheduleDateData[] ScheduledDates { get; set; } = Array.Empty<JobScheduleDateData>();
 
         [JsonPropertyName("notes")]
-        public JobNote[] Notes { get; set; } = Array.Empty<JobNote>();
+        public JobNoteData[] Notes { get; set; } = Array.Empty<JobNoteData>();
     }
 
-    [System.Obsolete("Use GlazerOps.Models.Data.SiteData instead", false)]
     [Table("sites")]
-    public class Site : BaseModel
+    public class SiteData : BaseModel
     {
         [JsonPropertyName("id")]
         [PrimaryKey("id", false)]
@@ -72,9 +62,8 @@ namespace GlazerOps.Models
         public Guid? OwnerUserId { get; set; }
     }
 
-    [System.Obsolete("Use GlazerOps.Models.Data.JobContactData instead", false)]
     [Table("job_contacts")]
-    public class JobContact : BaseModel
+    public class JobContactData : BaseModel
     {
         [JsonPropertyName("id")]
         [PrimaryKey("id", false)]
@@ -105,9 +94,8 @@ namespace GlazerOps.Models
         public Guid? OwnerUserId { get; set; }
     }
 
-    [System.Obsolete("Use GlazerOps.Models.Data.JobScheduleDateData instead", false)]
     [Table("job_schedule_dates")]
-    public class JobScheduleDate : BaseModel
+    public class JobScheduleDateData : BaseModel
     {
         [JsonPropertyName("id")]
         [PrimaryKey("id", false)]
@@ -132,9 +120,8 @@ namespace GlazerOps.Models
         public Guid? OwnerUserId { get; set; }
     }
 
-    [System.Obsolete("Use GlazerOps.Models.Data.JobNoteData instead", false)]
     [Table("job_notes")]
-    public class JobNote : BaseModel
+    public class JobNoteData : BaseModel
     {
         [JsonPropertyName("id")]
         [PrimaryKey("id", false)]
@@ -159,9 +146,8 @@ namespace GlazerOps.Models
         public Guid? OwnerUserId { get; set; }
     }
 
-    [System.Obsolete("Use GlazerOps.Models.Data.SiteContactData instead", false)]
     [Table("site_contacts")]
-    public class SiteContact : BaseModel
+    public class SiteContactData : BaseModel
     {
         [JsonPropertyName("id")]
         [PrimaryKey("id", false)]

@@ -1,7 +1,8 @@
 ﻿@page "/jobs"
 @using Supabase
 @using GlazerOps.Components
-@using GlazerOps.Models
+@using GlazerOps.Models.Domain
+@using GlazerOps.Services
 @inject Client Sb
 
 <PageTitle>Jobs</PageTitle>
@@ -38,11 +39,12 @@
 
         try
         {
-            var response = await Sb.From<Job>()
+            var response = await Sb.From<GlazerOps.Models.Data.JobData>()
                 .Select("*, site:sites(*), contacts:job_contacts(*), scheduled_dates:job_schedule_dates(*), notes:job_notes(*)")
                 .Get();
 
-            jobs = response?.Models ?? new List<Job>();
+            var dataModels = response?.Models ?? new List<GlazerOps.Models.Data.JobData>();
+            jobs = JobMapper.MapToDomain(dataModels);
         }
         catch (Exception ex)
         {
@@ -70,8 +72,8 @@
             || Contains(job.PONumber?.ToString(), search)
             || Contains(job.Site?.SiteName, search)
             || Contains(job.Assigned, search)
-            || Contains(job.Contacts?.FirstOrDefault(c => c.IsCurrent)?.Name, search)
-            || Contains(job.Notes?.FirstOrDefault(n => n.Pinned)?.Note, search);
+            || Contains(job.GetCurrentContact()?.Name, search)
+            || Contains(job.GetPinnedNotes().FirstOrDefault()?.Note, search);
     }
 
     private static bool Contains(string? source, string value) =>

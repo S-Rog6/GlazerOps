@@ -1,106 +1,71 @@
-﻿@using Microsoft.AspNetCore.Components
-@using GlazerOps.Models
+﻿@using MudBlazor
+@using GlazerOps.Models.Domain
 
-<div class="jobitem">
-    <div class="ji_leftside">
-        <div class="ji_header">
-            <NavLink href="@JobDetailsHref" class="ji_joblink">
-                <h4 class="ji_jobname">@DisplayJobName</h4>
-
-                @if (!string.IsNullOrWhiteSpace(DisplayPONumber))
-                {
-                    <span class="ji_po">@DisplayPONumber</span>
-                }
-            </NavLink>
-        </div>
-
-        @if (HasContactInfo)
-        {
-            <p class="ji_info">
-                @if (!string.IsNullOrWhiteSpace(DisplayPOC))
-                {
-                    <span class="ji_name">@DisplayPOC</span>
-                }
-
-                @if (!string.IsNullOrWhiteSpace(DisplayPOC) && !string.IsNullOrWhiteSpace(DisplayPOCNum))
-                {
-                    <span>: </span>
-                }
-
-                @if (!string.IsNullOrWhiteSpace(DisplayPOCNum))
-                {
-                    <PhoneLink PhoneNumber="@DisplayPOCNum" />
-                }
-            </p>
-        }
-
-        @if (!string.IsNullOrWhiteSpace(DisplayNotes))
-        {
-            <div class="ji_notes">
-                <button type="button" class="ji_notes_toggle" @onclick="ToggleNotes">
-                    @(showNotes ? "▼ Hide Notes" : "▶ Notes")
-                </button>
-
-                @if (showNotes)
-                {
-                    <div class="ji_notes_content">
-                        @DisplayNotes
-                    </div>
-                }
-            </div>
-        }
+<MudPaper Class="jc" Elevation="3">
+    <div class="jc_leftside">
+        <h2 class="jc_header">@jName</h2>
+        <p class="jc_PONumber"><strong>PO:</strong> @jPO</p>
+        <p class="jc_contacts"><strong>Contacts:</strong> @jContacts</p>
     </div>
-
-    <div class="ji_rightside">
-        <AddressLink BuildingName="@DisplayBuildingName"
-                     AddressLine1="@DisplayAddressLine1"
-                     AddressLine2="@DisplayAddressLine2"
-                     FullAddress="@DisplayFullAddress" />
+    <div class="jc_rightside">
+        <p class="jc_sitename"><strong>@sName</strong></p>
+        <p class="jc_location">@sAddress1</p>
+        <p class="jc_location">@sAddress2</p>
     </div>
-</div>
+</MudPaper>
+
+<style>
+    .jc {
+        display: flex;
+        width: 100%;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        padding: 12px;
+        margin: 0 0 12px 0;
+        box-sizing: border-box;
+        border-radius: 8px;
+        border: 1px solid #000;
+        background-color: #ddd;
+    }
+
+    .jc_leftside {
+        flex: 1 1 65%;
+        min-width: 0;
+        text-align: left;
+    }
+
+    .jc_rightside {
+        flex: 1 1 35%;
+        min-width: 0;
+        text-align: right;
+    }
+
+    .jc_header {
+        margin: 0 0 8px 0;
+        font-size: 1.25em;
+        color: #c00;
+    }
+
+    .jc_PONumber,
+    .jc_contacts,
+    .jc_sitename,
+    .jc_location {
+        margin: 4px 0;
+        color: #111;
+        overflow-wrap: anywhere;
+    }
+</style>
 
 @code {
-    [Parameter, EditorRequired]
+    [Parameter]
     public Job? Job { get; set; }
 
-    private bool showNotes;
+    private string jName => Job?.JobName ?? string.Empty;
+    private string jPO => Job?.PONumber?.ToString() ?? "—";
+    private string jContacts => Job?.GetCurrentContact()?.Name ?? "—";
 
-    private string DisplayJobName =>
-        string.IsNullOrWhiteSpace(Job?.JobName) ? "Unnamed Job" : Job.JobName;
-
-    private string DisplayPONumber =>
-        Job?.PONumber is null ? string.Empty : $"PO #{Job.PONumber}";
-
-    private JobContact? CurrentContact =>
-        Job?.Contacts?.FirstOrDefault(c => c.IsCurrent)
-        ?? Job?.Contacts?.FirstOrDefault();
-
-    private string DisplayPOC => CurrentContact?.Name ?? Job?.Assigned ?? string.Empty;
-
-    private string DisplayPOCNum => CurrentContact?.Phone ?? string.Empty;
-
-    private string DisplayNotes =>
-        Job?.Notes?.FirstOrDefault(n => n.Pinned)?.Note
-        ?? Job?.Notes?.OrderByDescending(n => n.NoteDate).FirstOrDefault()?.Note
-        ?? string.Empty;
-
-    private bool HasContactInfo =>
-        !string.IsNullOrWhiteSpace(DisplayPOC) ||
-        !string.IsNullOrWhiteSpace(DisplayPOCNum);
-
-    private string DisplayBuildingName => Job?.Site?.SiteName ?? string.Empty;
-    private string DisplayAddressLine1 => Job?.Site?.Address1 ?? string.Empty;
-    private string DisplayAddressLine2 => Job?.Site?.Address2 ?? string.Empty;
-
-    private string DisplayFullAddress =>
-        string.Join(" ", new[] { DisplayAddressLine1, DisplayAddressLine2 }
-            .Where(x => !string.IsNullOrWhiteSpace(x)));
-
-    private string JobDetailsHref =>
-        Job is null ? "/jobs" : $"/JobDetails/{Job.Id}";
-
-    private void ToggleNotes()
-    {
-        showNotes = !showNotes;
-    }
+    private string sName => string.IsNullOrWhiteSpace(Job?.Site?.SiteName) ? "—" : Job!.Site!.SiteName;
+    private string sAddress1 => Job?.Site?.Address1 ?? string.Empty;
+    private string sAddress2 => Job?.Site?.Address2 ?? string.Empty;
 }
