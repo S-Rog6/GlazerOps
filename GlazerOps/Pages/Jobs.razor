@@ -1,9 +1,12 @@
 ﻿@page "/jobs"
 @using Supabase
 @using GlazerOps.Components
+@using GlazerOps.Models.Data
 @using GlazerOps.Models.Domain
 @using GlazerOps.Services
 @inject Client Sb
+@inject LocalJobsStore LocalJobsStore
+@implements IDisposable
 
 <PageTitle>Jobs</PageTitle>
 
@@ -12,49 +15,213 @@
     <div class="alert alert-danger">@errorMessage</div>
 }
 
-<CardDisplayArea TItem="Job"
-                 Title="Jobs"
-                 Items="jobs"
-                 IsLoading="isLoading"
-                 FilterFunc="FilterJobs">
-    <ChildContent Context="job">
-        <JobCard Job="job" />
-    </ChildContent>
-</CardDisplayArea>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Jobs</h3>
+    <div class="btn-group" role="group">
+        <button type="button" class="btn @(showTableView ? "btn-outline-primary" : "btn-primary")" @onclick="() => showTableView = false">
+            Card View
+        </button>
+        <button type="button" class="btn @(showTableView ? "btn-primary" : "btn-outline-primary")" @onclick="() => showTableView = true">
+            Table View
+        </button>
+    </div>
+</div>
+
+@if (showTableView)
+{
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>PO Number</th>
+                    <th>Job Name</th>
+                    <th>Site</th>
+                    <th>Address</th>
+                    <th>Contact</th>
+                    <th>Assigned</th>
+                    <th>Scheduled Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (isLoading)
+                {
+                    <tr>
+                        <td colspan="7" class="text-center">Loading...</td>
+                    </tr>
+                }
+                else if (!jobs.Any())
+                {
+                    <tr>
+                        <td colspan="7" class="text-center">No jobs found</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var job in FilteredJobs)
+                    {
+                        <tr>
+                            <td>@job.PONumber</td>
+                            <td>@job.JobName</td>
+                            <td>@job.Site?.SiteName</td>
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(job.Site?.Address1))
+                                {
+                                    <div>@job.Site.Address1</div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(job.Site?.Address2))
+                                {
+                                    <div>@job.Site.Address2</div>
+                                }
+                            </td>
+                            <td>@job.GetCurrentContact()?.Name</td>
+                            <td>@string.Join(", ", job.Assigned)</td>
+                            <td>@job.GetPrimaryScheduleDate()?.ScheduledDate.ToString("MM/dd/yyyy")</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <CardDisplayArea TItem="Job"
+                     Title=""
+                     Items="jobs"
+                     IsLoading="isLoading"
+                     FilterFunc="FilterJobs">
+        <ChildContent Context="job">
+            <JobCard Job="job" />
+        </ChildContent>
+    </CardDisplayArea>
+}
 
 @code {
+    private const int MaxJobs = 20;
     private List<Job> jobs = new();
     private bool isLoading;
     private string? errorMessage;
+    private bool showTableView = false;
+    private string filterText = string.Empty;
+    private CancellationTokenSource? syncCancellation;
+
+    private IEnumerable<Job> FilteredJobs =>
+        jobs.Where(job => FilterJobs(job, filterText));
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadJobsAsync();
+        syncCancellation = new CancellationTokenSource();
+
+        isLoading = true;
+        await LoadJobsFromLocalAsync();
+
+        _ = Task.Run(() => MonitorAuthAndSyncAsync(syncCancellation.Token));
     }
 
-    private async Task LoadJobsAsync()
+    private async Task LoadJobsFromLocalAsync()
     {
-        isLoading = true;
-        errorMessage = null;
-
         try
         {
-            var response = await Sb.From<GlazerOps.Models.Data.JobData>()
-                .Select("*, site:sites(*), contacts:job_contacts(*), scheduled_dates:job_schedule_dates(*), notes:job_notes(*)")
-                .Get();
-
-            var dataModels = response?.Models ?? new List<GlazerOps.Models.Data.JobData>();
-            jobs = JobMapper.MapToDomain(dataModels);
+            var localJobs = await LocalJobsStore.LoadAsync(MaxJobs);
+            jobs = localJobs.ToList();
+            errorMessage = null;
         }
         catch (Exception ex)
         {
-            errorMessage = "Failed to load jobs.";
             Console.Error.WriteLine(ex);
             jobs = new List<Job>();
+            errorMessage = "Failed to load local jobs cache.";
         }
         finally
         {
             isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task MonitorAuthAndSyncAsync(CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                await LoadJobsFromSupabaseAsync(showLoading: jobs.Count == 0);
+                await Task.Delay(TimeSpan.FromMinutes(2), cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine(ex);
+                await InvokeAsync(() =>
+                {
+                    errorMessage = "Failed to refresh jobs from server.";
+                    StateHasChanged();
+                });
+
+                await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+            }
+        }
+    }
+
+    private async Task LoadJobsFromSupabaseAsync(bool showLoading)
+    {
+        if (showLoading)
+        {
+            await InvokeAsync(() =>
+            {
+                isLoading = true;
+                errorMessage = null;
+                StateHasChanged();
+            });
+        }
+
+        try
+        {
+            var jobsResponse = await Sb.From<JobCardViewData>()
+                .Select("*")
+                .Limit(MaxJobs)
+                .Get();
+
+            var dataModels = jobsResponse?.Models ?? new List<JobCardViewData>();
+            var mappedJobs = JobMapper.MapCardViewToDomain(dataModels)
+                .Take(MaxJobs)
+                .ToList();
+
+            await LocalJobsStore.SaveAsync(mappedJobs, MaxJobs);
+
+            await InvokeAsync(() =>
+            {
+                jobs = mappedJobs;
+                errorMessage = null;
+                StateHasChanged();
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex);
+            await InvokeAsync(() =>
+            {
+                if (!jobs.Any())
+                {
+                    errorMessage = "Failed to load jobs.";
+                }
+
+                StateHasChanged();
+            });
+        }
+        finally
+        {
+            if (showLoading)
+            {
+                await InvokeAsync(() =>
+                {
+                    isLoading = false;
+                    StateHasChanged();
+                });
+            }
         }
     }
 
@@ -71,7 +238,7 @@
         return Contains(job.JobName, search)
             || Contains(job.PONumber?.ToString(), search)
             || Contains(job.Site?.SiteName, search)
-            || Contains(job.Assigned, search)
+            || job.Assigned.Any(a => Contains(a, search))
             || Contains(job.GetCurrentContact()?.Name, search)
             || Contains(job.GetPinnedNotes().FirstOrDefault()?.Note, search);
     }
@@ -79,4 +246,16 @@
     private static bool Contains(string? source, string value) =>
         !string.IsNullOrWhiteSpace(source) &&
         source.Contains(value, StringComparison.OrdinalIgnoreCase);
+
+    public void Dispose()
+    {
+        if (syncCancellation is null)
+        {
+            return;
+        }
+
+        syncCancellation.Cancel();
+        syncCancellation.Dispose();
+        syncCancellation = null;
+    }
 }

@@ -20,7 +20,7 @@ public sealed class SupabaseLocalStorageSessionHandler : IGotrueSessionPersisten
     public void DestroySession()
         => _js.InvokeVoid("storageInterop.removeItem", Key);
 
-    public Session LoadSession()
+    public Session? LoadSession()
     {
         var json = _js.Invoke<string>("storageInterop.getItem", Key);
         return string.IsNullOrWhiteSpace(json) ? null : JsonConvert.DeserializeObject<Session>(json);

@@ -1,4 +1,5 @@
 using GlazerOps;
+using GlazerOps.Services;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using MudBlazor.Services;
@@ -22,6 +23,8 @@ builder.Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri(builder.H
 
 // MudBlazor
 builder.Services.AddMudServices();
+
+builder.Services.AddScoped<LocalJobsStore>();
 
 // Supabase config
 var supabaseUrl = builder.Configuration["Supabase:Url"];

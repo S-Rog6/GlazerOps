@@ -36,7 +36,10 @@ namespace GlazerOps.Models
         public Guid? OwnerUserId { get; set; }
 
         [JsonPropertyName("assigned")]
-        public string? Assigned { get; set; }
+        public string[] Assigned { get; set; } = Array.Empty<string>();
+
+        [JsonPropertyName("contact_ids")]
+        public long[] ContactIds { get; set; } = Array.Empty<long>();
 
         [JsonPropertyName("site")]
         public Site? Site { get; set; }
@@ -67,9 +70,6 @@ namespace GlazerOps.Models
 
         [JsonPropertyName("address_2")]
         public string? Address2 { get; set; }
-
-        [JsonPropertyName("owner_user_id")]
-        public Guid? OwnerUserId { get; set; }
     }
 
     [System.Obsolete("Use GlazerOps.Models.Data.JobContactData instead", false)]
@@ -79,9 +79,6 @@ namespace GlazerOps.Models
         [JsonPropertyName("id")]
         [PrimaryKey("id", false)]
         public long Id { get; set; }
-
-        [JsonPropertyName("job_id")]
-        public long JobId { get; set; }
 
         [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
@@ -94,15 +91,6 @@ namespace GlazerOps.Models
 
         [JsonPropertyName("role")]
         public string? Role { get; set; }
-
-        [JsonPropertyName("notes")]
-        public string? Notes { get; set; }
-
-        [JsonPropertyName("is_current")]
-        public bool IsCurrent { get; set; }
-
-        [JsonPropertyName("owner_user_id")]
-        public Guid? OwnerUserId { get; set; }
     }
 
     [System.Obsolete("Use GlazerOps.Models.Data.JobScheduleDateData instead", false)]
@@ -118,18 +106,6 @@ namespace GlazerOps.Models
 
         [JsonPropertyName("scheduled_date")]
         public DateTime ScheduledDate { get; set; }
-
-        [JsonPropertyName("status")]
-        public string Status { get; set; } = "Scheduled";
-
-        [JsonPropertyName("note")]
-        public string? Note { get; set; }
-
-        [JsonPropertyName("is_primary")]
-        public bool IsPrimary { get; set; }
-
-        [JsonPropertyName("owner_user_id")]
-        public Guid? OwnerUserId { get; set; }
     }
 
     [System.Obsolete("Use GlazerOps.Models.Data.JobNoteData instead", false)]
@@ -152,8 +128,8 @@ namespace GlazerOps.Models
         [JsonPropertyName("marked")]
         public bool Marked { get; set; }
 
-        [JsonPropertyName("note_date")]
-        public DateTime NoteDate { get; set; }
+        [JsonPropertyName("note_dtg")]
+        public DateTime? NoteDtg { get; set; }
 
         [JsonPropertyName("owner_user_id")]
         public Guid? OwnerUserId { get; set; }

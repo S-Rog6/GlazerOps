@@ -27,19 +27,59 @@ namespace GlazerOps.Models.Data
         public Guid? OwnerUserId { get; set; }
 
         [JsonPropertyName("assigned")]
-        public string? Assigned { get; set; }
+        public string[] Assigned { get; set; } = Array.Empty<string>();
+
+        [JsonPropertyName("contact_ids")]
+        public long[] ContactIds { get; set; } = Array.Empty<long>();
 
         [JsonPropertyName("site")]
         public SiteData? Site { get; set; }
-
-        [JsonPropertyName("contacts")]
-        public JobContactData[] Contacts { get; set; } = Array.Empty<JobContactData>();
 
         [JsonPropertyName("scheduled_dates")]
         public JobScheduleDateData[] ScheduledDates { get; set; } = Array.Empty<JobScheduleDateData>();
 
         [JsonPropertyName("notes")]
         public JobNoteData[] Notes { get; set; } = Array.Empty<JobNoteData>();
+    }
+
+    [Table("vw_job_card")]
+    public class JobCardViewData : BaseModel
+    {
+        [JsonPropertyName("job_id")]
+        [PrimaryKey("job_id", false)]
+        public long JobId { get; set; }
+
+        [JsonPropertyName("job_name")]
+        public string JobName { get; set; } = string.Empty;
+
+        [JsonPropertyName("po_number")]
+        public long? PONumber { get; set; }
+
+        [JsonPropertyName("site_name")]
+        public string? SiteName { get; set; }
+
+        [JsonPropertyName("address_1")]
+        public string? Address1 { get; set; }
+
+        [JsonPropertyName("address_2")]
+        public string? Address2 { get; set; }
+
+        [JsonPropertyName("contacts")]
+        public string? Contacts { get; set; }
+    }
+
+    [Table("expected_buckets")]
+    public class ExpectedBucketData : BaseModel
+    {
+        [JsonPropertyName("id")]
+        [PrimaryKey("id", false)]
+        public int Id { get; set; }
+
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = string.Empty;
+
+        [JsonPropertyName("created_at")]
+        public DateTime? CreatedAt { get; set; }
     }
 
     [Table("sites")]
@@ -57,9 +97,6 @@ namespace GlazerOps.Models.Data
 
         [JsonPropertyName("address_2")]
         public string? Address2 { get; set; }
-
-        [JsonPropertyName("owner_user_id")]
-        public Guid? OwnerUserId { get; set; }
     }
 
     [Table("job_contacts")]
@@ -68,9 +105,6 @@ namespace GlazerOps.Models.Data
         [JsonPropertyName("id")]
         [PrimaryKey("id", false)]
         public long Id { get; set; }
-
-        [JsonPropertyName("job_id")]
-        public long JobId { get; set; }
 
         [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
@@ -83,15 +117,6 @@ namespace GlazerOps.Models.Data
 
         [JsonPropertyName("role")]
         public string? Role { get; set; }
-
-        [JsonPropertyName("notes")]
-        public string? Notes { get; set; }
-
-        [JsonPropertyName("is_current")]
-        public bool IsCurrent { get; set; }
-
-        [JsonPropertyName("owner_user_id")]
-        public Guid? OwnerUserId { get; set; }
     }
 
     [Table("job_schedule_dates")]
@@ -106,18 +131,6 @@ namespace GlazerOps.Models.Data
 
         [JsonPropertyName("scheduled_date")]
         public DateTime ScheduledDate { get; set; }
-
-        [JsonPropertyName("status")]
-        public string Status { get; set; } = "Scheduled";
-
-        [JsonPropertyName("note")]
-        public string? Note { get; set; }
-
-        [JsonPropertyName("is_primary")]
-        public bool IsPrimary { get; set; }
-
-        [JsonPropertyName("owner_user_id")]
-        public Guid? OwnerUserId { get; set; }
     }
 
     [Table("job_notes")]
@@ -139,11 +152,31 @@ namespace GlazerOps.Models.Data
         [JsonPropertyName("marked")]
         public bool Marked { get; set; }
 
-        [JsonPropertyName("note_date")]
-        public DateTime NoteDate { get; set; }
+        [JsonPropertyName("note_dtg")]
+        public DateTime? NoteDtg { get; set; }
 
         [JsonPropertyName("owner_user_id")]
         public Guid? OwnerUserId { get; set; }
+    }
+
+    [Table("user_file_jobs")]
+    public class UserFileJobData : BaseModel
+    {
+        [JsonPropertyName("id")]
+        [PrimaryKey("id", false)]
+        public long Id { get; set; }
+
+        [JsonPropertyName("user_id")]
+        public Guid UserId { get; set; }
+
+        [JsonPropertyName("payload")]
+        public string Payload { get; set; } = "{}";
+
+        [JsonPropertyName("processed")]
+        public bool Processed { get; set; }
+
+        [JsonPropertyName("created_at")]
+        public DateTime? CreatedAt { get; set; }
     }
 
     [Table("site_contacts")]

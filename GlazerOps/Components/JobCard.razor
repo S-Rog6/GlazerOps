@@ -1,16 +1,26 @@
 ﻿@using MudBlazor
 @using GlazerOps.Models.Domain
+@inject NavigationManager Navigation
+@using GlazerOps.Services
+
 
 <MudPaper Class="jc" Elevation="3">
     <div class="jc_leftside">
-        <h2 class="jc_header">@jName</h2>
-        <p class="jc_PONumber"><strong>PO:</strong> @jPO</p>
-        <p class="jc_contacts"><strong>Contacts:</strong> @jContacts</p>
+        <h2 class="jc_header">@Job?.JobName</h2>
+        <p class="jc_PONumber"> @Job?.PONumber</p>
+        <p class="jc_contacts"><strong>Contacts:</strong> @Job?.GetCurrentContact()?.Name</p>
     </div>
     <div class="jc_rightside">
-        <p class="jc_sitename"><strong>@sName</strong></p>
-        <p class="jc_location">@sAddress1</p>
-        <p class="jc_location">@sAddress2</p>
+        <p class="jc_sitename"><strong>@Job?.Site?.SiteName</strong></p>
+        @if (!string.IsNullOrWhiteSpace(Job?.Site?.Address1))
+        {
+            <p class="job-card__location">@Job.Site.Address1</p>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Job?.Site?.Address2))
+        {
+            <p class="job-card__location">@Job.Site.Address2</p>
+        }
     </div>
 </MudPaper>
 
@@ -18,11 +28,12 @@
     .jc {
         display: flex;
         width: 100%;
+        margin-bottom: 10px;
         justify-content: space-between;
         align-items: flex-start;
         gap: 16px;
+        width: 100%;
         padding: 12px;
-        margin: 0 0 12px 0;
         box-sizing: border-box;
         border-radius: 8px;
         border: 1px solid #000;
@@ -31,13 +42,13 @@
 
     .jc_leftside {
         flex: 1 1 65%;
-        min-width: 0;
+        min-width: 40%;
         text-align: left;
     }
 
     .jc_rightside {
         flex: 1 1 35%;
-        min-width: 0;
+        min-width: 20%;
         text-align: right;
     }
 
@@ -45,6 +56,7 @@
         margin: 0 0 8px 0;
         font-size: 1.25em;
         color: #c00;
+        overflow-wrap: anywhere;
     }
 
     .jc_PONumber,
@@ -55,17 +67,29 @@
         color: #111;
         overflow-wrap: anywhere;
     }
+
+    @@media (max-width: 768px) {
+        .job-card {
+            flex-direction: column;
+        }
+
+        .job-card__right {
+            text-align: left;
+        }
+    }
 </style>
 
 @code {
     [Parameter]
     public Job? Job { get; set; }
 
-    private string jName => Job?.JobName ?? string.Empty;
-    private string jPO => Job?.PONumber?.ToString() ?? "—";
-    private string jContacts => Job?.GetCurrentContact()?.Name ?? "—";
+    public string jName     =>
+        string.IsNullOrWhiteSpace(Job?.JobName) ? "—" : Job!.JobName!;
+    private string jPO => Job?.PONumber is null ? "—" : Job!.PONumber!.ToString();
+    private string jContacts => string.IsNullOrWhiteSpace(Job?.GetCurrentContact()?.Name) ? "—" : Job!.GetCurrentContact()!.Name!;
 
-    private string sName => string.IsNullOrWhiteSpace(Job?.Site?.SiteName) ? "—" : Job!.Site!.SiteName;
-    private string sAddress1 => Job?.Site?.Address1 ?? string.Empty;
-    private string sAddress2 => Job?.Site?.Address2 ?? string.Empty;
+    private string sName => string.IsNullOrWhiteSpace(Job?.Site?.SiteName) ? "—" : Job!.Site!.SiteName!;
+    private string AddressLine1 => Job?.Site?.Address1 ?? string.Empty;
+    private string AddressLine2 => Job?.Site?.Address2 ?? string.Empty;
+    
 }

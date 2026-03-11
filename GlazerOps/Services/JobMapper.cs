@@ -10,6 +10,11 @@ namespace GlazerOps.Services
     {
         public static Job MapToDomain(JobData data)
         {
+            return MapToDomain(data, null);
+        }
+
+        public static Job MapToDomain(JobData data, IReadOnlyDictionary<long, JobContactData>? contactsById)
+        {
             return new Job
             {
                 Id = data.Id,
@@ -17,9 +22,10 @@ namespace GlazerOps.Services
                 JobName = data.JobName,
                 SiteId = data.SiteId,
                 OwnerUserId = data.OwnerUserId,
-                Assigned = data.Assigned,
+                Assigned = data.Assigned ?? Array.Empty<string>(),
+                ContactIds = data.ContactIds ?? Array.Empty<long>(),
                 Site = data.Site != null ? MapSiteToDomain(data.Site) : null,
-                Contacts = data.Contacts.Select(MapContactToDomain).ToArray(),
+                Contacts = MapContacts(data.ContactIds, contactsById),
                 ScheduledDates = data.ScheduledDates.Select(MapScheduleDateToDomain).ToArray(),
                 Notes = data.Notes.Select(MapNoteToDomain).ToArray()
             };
@@ -30,6 +36,25 @@ namespace GlazerOps.Services
             return dataList.Select(MapToDomain).ToList();
         }
 
+        public static List<Job> MapToDomain(IEnumerable<JobData> dataList, IEnumerable<JobContactData> contacts)
+        {
+            var contactsById = contacts.ToDictionary(c => c.Id);
+            return dataList.Select(data => MapToDomain(data, contactsById)).ToList();
+        }
+
+        private static JobContact[] MapContacts(long[]? contactIds, IReadOnlyDictionary<long, JobContactData>? contactsById)
+        {
+            if (contactsById == null || contactIds == null || contactIds.Length == 0)
+            {
+                return Array.Empty<JobContact>();
+            }
+
+            return contactIds
+                .Where(contactsById.ContainsKey)
+                .Select(id => MapContactToDomain(contactsById[id]))
+                .ToArray();
+        }
+
         private static Site MapSiteToDomain(SiteData data)
         {
             return new Site
@@ -37,8 +62,7 @@ namespace GlazerOps.Services
                 Id = data.Id,
                 SiteName = data.SiteName,
                 Address1 = data.Address1,
-                Address2 = data.Address2,
-                OwnerUserId = data.OwnerUserId
+                Address2 = data.Address2
             };
         }
 
@@ -47,14 +71,10 @@ namespace GlazerOps.Services
             return new JobContact
             {
                 Id = data.Id,
-                JobId = data.JobId,
                 Name = data.Name,
                 Phone = data.Phone,
                 Email = data.Email,
-                Role = data.Role,
-                Notes = data.Notes,
-                IsCurrent = data.IsCurrent,
-                OwnerUserId = data.OwnerUserId
+                Role = data.Role
             };
         }
 
@@ -64,11 +84,7 @@ namespace GlazerOps.Services
             {
                 Id = data.Id,
                 JobId = data.JobId,
-                ScheduledDate = data.ScheduledDate,
-                Status = data.Status,
-                Note = data.Note,
-                IsPrimary = data.IsPrimary,
-                OwnerUserId = data.OwnerUserId
+                ScheduledDate = data.ScheduledDate
             };
         }
 
@@ -81,7 +97,7 @@ namespace GlazerOps.Services
                 Note = data.Note,
                 Pinned = data.Pinned,
                 Marked = data.Marked,
-                NoteDate = data.NoteDate,
+                NoteDtg = data.NoteDtg,
                 OwnerUserId = data.OwnerUserId
             };
         }
@@ -100,6 +116,36 @@ namespace GlazerOps.Services
                 Active = data.Active,
                 OwnerUserId = data.OwnerUserId
             };
+        }
+
+        public static Job MapCardViewToDomain(JobCardViewData data)
+        {
+            return new Job
+            {
+                Id = data.JobId,
+                PONumber = data.PONumber,
+                JobName = data.JobName,
+                Site = new Site
+                {
+                    SiteName = data.SiteName ?? string.Empty,
+                    Address1 = data.Address1,
+                    Address2 = data.Address2
+                },
+                Contacts = string.IsNullOrWhiteSpace(data.Contacts)
+                    ? Array.Empty<JobContact>()
+                    : new[]
+                    {
+                        new JobContact
+                        {
+                            Name = data.Contacts
+                        }
+                    }
+            };
+        }
+
+        public static List<Job> MapCardViewToDomain(IEnumerable<JobCardViewData> dataList)
+        {
+            return dataList.Select(MapCardViewToDomain).ToList();
         }
     }
 }

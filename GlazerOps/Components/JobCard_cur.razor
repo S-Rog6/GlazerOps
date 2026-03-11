@@ -1,5 +1,5 @@
 ﻿@using Microsoft.AspNetCore.Components
-@using GlazerOps.Models
+@using GlazerOps.Models.Domain
 
 <div class="jobitem">
     <div class="ji_leftside">
@@ -72,16 +72,17 @@
         Job?.PONumber is null ? string.Empty : $"PO #{Job.PONumber}";
 
     private JobContact? CurrentContact =>
-        Job?.Contacts?.FirstOrDefault(c => c.IsCurrent)
-        ?? Job?.Contacts?.FirstOrDefault();
+        Job?.Contacts?.FirstOrDefault();
 
-    private string DisplayPOC => CurrentContact?.Name ?? Job?.Assigned ?? string.Empty;
+    private string DisplayPOC =>
+        CurrentContact?.Name
+        ?? string.Join(", ", Job?.Assigned ?? Array.Empty<string>());
 
     private string DisplayPOCNum => CurrentContact?.Phone ?? string.Empty;
 
     private string DisplayNotes =>
         Job?.Notes?.FirstOrDefault(n => n.Pinned)?.Note
-        ?? Job?.Notes?.OrderByDescending(n => n.NoteDate).FirstOrDefault()?.Note
+        ?? Job?.Notes?.OrderByDescending(n => n.NoteDtg).FirstOrDefault()?.Note
         ?? string.Empty;
 
     private bool HasContactInfo =>
