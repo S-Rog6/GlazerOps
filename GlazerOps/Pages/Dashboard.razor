@@ -2,16 +2,10 @@
 @using Supabase
 @inject Client Sb
 @inject HttpClient Http
-@using GlazerOps.Components
-@using GlazerOps.Models
 
 <PageTitle>Dashboard</PageTitle>
-@* 
-<CardDisplayArea Title="Today" />
- *@
 
-
-
+<h2>Dashboard</h2>
 
 <h3>Supabase Test</h3>
 <p>@_msg</p>
@@ -33,15 +27,18 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadSupabaseStatusAsync();
+    }
+
+    private async Task LoadSupabaseStatusAsync()
+    {
         try
         {
-            // Confirm basic config is reachable by calling Supabase Auth endpoint
-            // This does NOT require you to be logged in.
             var req = new HttpRequestMessage(HttpMethod.Get, "https://mkcpedfhpiebdggrszrl.supabase.co/auth/v1/settings");
             req.Headers.Add("apikey", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1rY3BlZGZocGllYmRnZ3JzenJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5Mjc0MzUsImV4cCI6MjA4NzUwMzQzNX0.1fJ7F1BA8d6U83JZGiiJi2yeqEXmvZjUnp619URZ5co");
 
             var res = await Http.SendAsync(req);
-            var body = await res.Content.ReadAsStringAsync();
+            _ = await res.Content.ReadAsStringAsync();
 
             _msg = $"Auth settings status: {(int)res.StatusCode} {res.ReasonPhrase}";
         }

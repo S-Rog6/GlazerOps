@@ -1,14 +1,9 @@
 ﻿@page "/jobs"
-@using Supabase
 @using GlazerOps.Components
-@using GlazerOps.Models.Data
 @using GlazerOps.Models.Domain
 @using GlazerOps.Services
-@using ApiJobCard = GlazerOps.Models.JobCard
-@inject Client Sb
+@using ApiJobCard = GlazerOps.Models.JobCardModel
 @inject LocalJobsStore LocalJobsStore
-@inject JobCardService JobCardService
-@implements IDisposable
 
 <PageTitle>Jobs</PageTitle>
 
@@ -106,7 +101,6 @@ else
     private string? errorMessage;
     private bool showTableView = false;
     private string filterText = string.Empty;
-    private CancellationTokenSource? syncCancellation;
 
     private IEnumerable<Job> FilteredJobs =>
         jobs.Where(job => FilterJobs(job, filterText));
@@ -116,12 +110,8 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        syncCancellation = new CancellationTokenSource();
-
         isLoading = true;
         await LoadJobsFromLocalAsync();
-
-        _ = Task.Run(() => MonitorAuthAndSyncAsync(syncCancellation.Token));
     }
 
     private async Task LoadJobsFromLocalAsync()
@@ -131,13 +121,6 @@ else
             var localJobs = await LocalJobsStore.LoadAsync(MaxJobs);
             jobs = localJobs.ToList();
             cardJobs = jobs.Select(MapDomainToCard).ToList();
-
-            var serviceCards = await JobCardService.GetJobCards();
-            if (serviceCards.Any())
-            {
-                cardJobs = serviceCards.Take(MaxJobs).ToList();
-            }
-
             errorMessage = null;
         }
         catch (Exception ex)
@@ -151,97 +134,6 @@ else
         {
             isLoading = false;
             await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private async Task MonitorAuthAndSyncAsync(CancellationToken cancellationToken)
-    {
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            try
-            {
-                await LoadJobsFromSupabaseAsync(showLoading: jobs.Count == 0 && cardJobs.Count == 0);
-                await Task.Delay(TimeSpan.FromMinutes(2), cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                break;
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine(ex);
-                await InvokeAsync(() =>
-                {
-                    errorMessage = "Failed to refresh jobs from server.";
-                    StateHasChanged();
-                });
-
-                await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
-            }
-        }
-    }
-
-    private async Task LoadJobsFromSupabaseAsync(bool showLoading)
-    {
-        if (showLoading)
-        {
-            await InvokeAsync(() =>
-            {
-                isLoading = true;
-                errorMessage = null;
-                StateHasChanged();
-            });
-        }
-
-        try
-        {
-           
-
-            var jobsResponse = await Sb.From<JobCardViewData>()
-                .Select("*")
-                .Limit(MaxJobs)
-                .Get();
-
-            var dataModels = jobsResponse?.Models ?? new List<JobCardViewData>();
-            var mappedJobs = JobMapper.MapCardViewToDomain(dataModels)
-                .Take(MaxJobs)
-                .ToList();
-
-            await LocalJobsStore.SaveAsync(mappedJobs, MaxJobs);
-            var serviceCards = await JobCardService.GetJobCards();
-            await InvokeAsync(() =>
-            {
-                jobs = mappedJobs;
-                cardJobs = serviceCards.Any()
-                    ? serviceCards.Take(MaxJobs).ToList()
-                    : mappedJobs.Select(MapDomainToCard).ToList();
-                errorMessage = null;
-                StateHasChanged();
-            });
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine(ex);
-            await InvokeAsync(() =>
-            {
-                if (!jobs.Any() && !cardJobs.Any())
-                {
-                    errorMessage = "Failed to load jobs.";
-                }
-
-                StateHasChanged();
-            });
-        }
-        finally
-        {
-            if (showLoading)
-            {
-                await InvokeAsync(() =>
-                {
-                    isLoading = false;
-                    StateHasChanged();
-                });
-            }
         }
     }
 
@@ -299,16 +191,4 @@ else
     private static bool Contains(string? source, string value) =>
         !string.IsNullOrWhiteSpace(source) &&
         source.Contains(value, StringComparison.OrdinalIgnoreCase);
-
-    public void Dispose()
-    {
-        if (syncCancellation is null)
-        {
-            return;
-        }
-
-        syncCancellation.Cancel();
-        syncCancellation.Dispose();
-        syncCancellation = null;
-    }
 }

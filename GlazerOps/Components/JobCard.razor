@@ -1,10 +1,11 @@
-﻿@using MudBlazor
+﻿@using GlazerOps.Models
+@using MudBlazor
 @using DomainJob = GlazerOps.Models.Domain.Job
-@using JobCardModel = GlazerOps.Models.JobCard
+@using JobCardModel = GlazerOps.Models.JobCardModel
 
 <MudPaper Class="jc" Elevation="3">
     <div class="jc_leftside">
-        <h2 class="jc_header">@DisplayJobName</h2>
+        <h2 class="jc_header">@_DisplayJobName</h2>
         <p class="jc_PONumber">@DisplayPONumber</p>
         <p class="jc_contacts"><strong>Contacts:</strong> @DisplayContacts</p>
     </div>
@@ -12,12 +13,12 @@
         <p class="jc_sitename"><strong>@DisplaySiteName</strong></p>
         @if (!string.IsNullOrWhiteSpace(DisplayAddress1))
         {
-            <p class="job-card__location">@DisplayAddress1</p>
+            <p class="jc_location">@DisplayAddress1</p>
         }
 
         @if (!string.IsNullOrWhiteSpace(DisplayAddress2))
         {
-            <p class="job-card__location">@DisplayAddress2</p>
+            <p class="jc_location">@DisplayAddress2</p>
         }
     </div>
 </MudPaper>
@@ -51,6 +52,7 @@
     }
 
     .jc_header {
+        display: flex;
         margin: 0 0 8px 0;
         font-size: 1.25em;
         color: #c00;
@@ -67,12 +69,12 @@
     }
 
     @@media (max-width: 768px) {
-        .job-card {
+        .jc {
             flex-direction: column;
         }
 
-        .job-card__right {
-            text-align: left;
+        .jc_rightside {
+            text-align: end;
         }
     }
 </style>
@@ -84,7 +86,7 @@
     [Parameter]
     public JobCardModel? Card { get; set; }
 
-    private string DisplayJobName =>
+    private string _DisplayJobName =>
         !string.IsNullOrWhiteSpace(Card?.job_name) ? Card.job_name :
         !string.IsNullOrWhiteSpace(Job?.JobName) ? Job.JobName : "—";
 

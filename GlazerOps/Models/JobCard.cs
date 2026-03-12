@@ -1,6 +1,6 @@
 ﻿namespace GlazerOps.Models
 {
-    public class JobCard
+    public class JobCardModel
     {
         public long job_id { get; set; }
 
