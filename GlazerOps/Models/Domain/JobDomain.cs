@@ -28,7 +28,7 @@ namespace GlazerOps.Models.Domain
         /// Gets the earliest scheduled date for this job.
         /// </summary>
         public JobScheduleDate? GetPrimaryScheduleDate() =>
-            ScheduledDates.OrderBy(d => d.ScheduledDate).FirstOrDefault();
+            ScheduledDates.OrderBy(d => d.StartDate).FirstOrDefault();
 
         /// <summary>
         /// Gets pinned notes for this job.
@@ -55,34 +55,36 @@ namespace GlazerOps.Models.Domain
     public class JobContact
     {
         public long Id { get; set; }
+        public long PoId { get; set; }
         public string Name { get; set; } = string.Empty;
         public string? Phone { get; set; }
         public string? Email { get; set; }
-        public string? Role { get; set; }
+        public bool IsPrimary { get; set; }
     }
 
     public class JobScheduleDate
     {
         public long Id { get; set; }
-        public long JobId { get; set; }
-        public DateTime ScheduledDate { get; set; }
+        public long PoId { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
     }
 
     public class JobNote
     {
         public long Id { get; set; }
-        public long JobId { get; set; }
+        public long PoId { get; set; }
         public string Note { get; set; } = string.Empty;
         public bool Pinned { get; set; }
         public bool Marked { get; set; }
-        public DateTime? NoteDtg { get; set; }
+        public DateTime? DateDtg { get; set; }
         public Guid? OwnerUserId { get; set; }
     }
 
     public class UserFileJob
     {
         public long Id { get; set; }
-        public Guid UserId { get; set; }
+        public Guid OwnerId { get; set; }
         public string Payload { get; set; } = "{}";
         public bool Processed { get; set; }
         public DateTime? CreatedAt { get; set; }
@@ -96,8 +98,6 @@ namespace GlazerOps.Models.Domain
         public string? Phone { get; set; }
         public string? Email { get; set; }
         public string? Role { get; set; }
-        public string? Notes { get; set; }
-        public bool Active { get; set; } = true;
-        public Guid? OwnerUserId { get; set; }
+        public bool IsPrimary { get; set; }
     }
 }

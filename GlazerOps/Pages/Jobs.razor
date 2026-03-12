@@ -72,7 +72,7 @@
                             </td>
                             <td>@job.GetCurrentContact()?.Name</td>
                             <td>@string.Join(", ", job.Assigned)</td>
-                            <td>@job.GetPrimaryScheduleDate()?.ScheduledDate.ToString("MM/dd/yyyy")</td>
+                            <td>@job.GetPrimaryScheduleDate()?.StartDate.ToString("MM/dd/yyyy")</td>
                         </tr>
                     }
                 }

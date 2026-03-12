@@ -71,10 +71,11 @@ namespace GlazerOps.Services
             return new JobContact
             {
                 Id = data.Id,
+                PoId = data.PoId,
                 Name = data.Name,
                 Phone = data.Phone,
                 Email = data.Email,
-                Role = data.Role
+                IsPrimary = data.IsPrimary
             };
         }
 
@@ -83,8 +84,9 @@ namespace GlazerOps.Services
             return new JobScheduleDate
             {
                 Id = data.Id,
-                JobId = data.JobId,
-                ScheduledDate = data.ScheduledDate
+                PoId = data.PoId,
+                StartDate = data.StartDate,
+                EndDate = data.EndDate
             };
         }
 
@@ -93,11 +95,11 @@ namespace GlazerOps.Services
             return new JobNote
             {
                 Id = data.Id,
-                JobId = data.JobId,
+                PoId = data.PoId,
                 Note = data.Note,
                 Pinned = data.Pinned,
                 Marked = data.Marked,
-                NoteDtg = data.NoteDtg,
+                DateDtg = data.DateDtg,
                 OwnerUserId = data.OwnerUserId
             };
         }
@@ -112,9 +114,7 @@ namespace GlazerOps.Services
                 Phone = data.Phone,
                 Email = data.Email,
                 Role = data.Role,
-                Notes = data.Notes,
-                Active = data.Active,
-                OwnerUserId = data.OwnerUserId
+                IsPrimary = data.IsPrimary
             };
         }
 

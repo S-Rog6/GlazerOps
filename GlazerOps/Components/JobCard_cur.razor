@@ -82,7 +82,7 @@
 
     private string DisplayNotes =>
         Job?.Notes?.FirstOrDefault(n => n.Pinned)?.Note
-        ?? Job?.Notes?.OrderByDescending(n => n.NoteDtg).FirstOrDefault()?.Note
+        ?? Job?.Notes?.OrderByDescending(n => n.DateDtg).FirstOrDefault()?.Note
         ?? string.Empty;
 
     private bool HasContactInfo =>
