@@ -35,10 +35,10 @@ namespace GlazerOps.Models.Data
         [JsonPropertyName("site")]
         public SiteData? Site { get; set; }
 
-        [JsonPropertyName("scheduled_dates")]
+        [JsonPropertyName("po_schedules")]
         public JobScheduleDateData[] ScheduledDates { get; set; } = Array.Empty<JobScheduleDateData>();
 
-        [JsonPropertyName("notes")]
+        [JsonPropertyName("po_notes")]
         public JobNoteData[] Notes { get; set; } = Array.Empty<JobNoteData>();
     }
 
@@ -68,7 +68,7 @@ namespace GlazerOps.Models.Data
         public string? Contacts { get; set; }
     }
 
-    [Table("expected_buckets")]
+    [Table("inspected_buckets")]
     public class ExpectedBucketData : BaseModel
     {
         [JsonPropertyName("id")]
@@ -99,12 +99,15 @@ namespace GlazerOps.Models.Data
         public string? Address2 { get; set; }
     }
 
-    [Table("job_contacts")]
+    [Table("po_contacts")]
     public class JobContactData : BaseModel
     {
         [JsonPropertyName("id")]
         [PrimaryKey("id", false)]
         public long Id { get; set; }
+
+        [JsonPropertyName("po_id")]
+        public long PoId { get; set; }
 
         [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
@@ -115,33 +118,36 @@ namespace GlazerOps.Models.Data
         [JsonPropertyName("email")]
         public string? Email { get; set; }
 
-        [JsonPropertyName("role")]
-        public string? Role { get; set; }
+        [JsonPropertyName("is_primary")]
+        public bool IsPrimary { get; set; }
     }
 
-    [Table("job_schedule_dates")]
+    [Table("po_schedules")]
     public class JobScheduleDateData : BaseModel
     {
         [JsonPropertyName("id")]
         [PrimaryKey("id", false)]
         public long Id { get; set; }
 
-        [JsonPropertyName("job_id")]
-        public long JobId { get; set; }
+        [JsonPropertyName("po_id")]
+        public long PoId { get; set; }
 
-        [JsonPropertyName("scheduled_date")]
-        public DateTime ScheduledDate { get; set; }
+        [JsonPropertyName("start_date")]
+        public DateTime StartDate { get; set; }
+
+        [JsonPropertyName("end_date")]
+        public DateTime? EndDate { get; set; }
     }
 
-    [Table("job_notes")]
+    [Table("po_notes")]
     public class JobNoteData : BaseModel
     {
         [JsonPropertyName("id")]
         [PrimaryKey("id", false)]
         public long Id { get; set; }
 
-        [JsonPropertyName("job_id")]
-        public long JobId { get; set; }
+        [JsonPropertyName("po_id")]
+        public long PoId { get; set; }
 
         [JsonPropertyName("note")]
         public string Note { get; set; } = string.Empty;
@@ -152,22 +158,22 @@ namespace GlazerOps.Models.Data
         [JsonPropertyName("marked")]
         public bool Marked { get; set; }
 
-        [JsonPropertyName("note_dtg")]
-        public DateTime? NoteDtg { get; set; }
+        [JsonPropertyName("date_dtg")]
+        public DateTime? DateDtg { get; set; }
 
         [JsonPropertyName("owner_user_id")]
         public Guid? OwnerUserId { get; set; }
     }
 
-    [Table("user_file_jobs")]
+    [Table("owner_file_jobs")]
     public class UserFileJobData : BaseModel
     {
         [JsonPropertyName("id")]
         [PrimaryKey("id", false)]
         public long Id { get; set; }
 
-        [JsonPropertyName("user_id")]
-        public Guid UserId { get; set; }
+        [JsonPropertyName("owner_id")]
+        public Guid OwnerId { get; set; }
 
         [JsonPropertyName("payload")]
         public string Payload { get; set; } = "{}";
@@ -201,13 +207,7 @@ namespace GlazerOps.Models.Data
         [JsonPropertyName("role")]
         public string? Role { get; set; }
 
-        [JsonPropertyName("notes")]
-        public string? Notes { get; set; }
-
-        [JsonPropertyName("active")]
-        public bool Active { get; set; } = true;
-
-        [JsonPropertyName("owner_user_id")]
-        public Guid? OwnerUserId { get; set; }
+        [JsonPropertyName("is_primary")]
+        public bool IsPrimary { get; set; }
     }
 }
