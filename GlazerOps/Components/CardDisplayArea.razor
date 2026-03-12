@@ -16,13 +16,13 @@
         {
             <div class="loading-container">
                 <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-                <p>Loading...</p>
+                <p>@LoadingText</p>
             </div>
         }
         else if (FilteredItems == null || !FilteredItems.Any())
         {
             <div class="empty-state">
-                <p>No items to display</p>
+                <p>@EmptyText</p>
             </div>
         }
         else
@@ -107,6 +107,12 @@
 
     [Parameter]
     public bool IsLoading { get; set; }
+
+    [Parameter]
+    public string LoadingText { get; set; } = "Loading...";
+
+    [Parameter]
+    public string EmptyText { get; set; } = "No items to display";
 
     private IEnumerable<TItem>? FilteredItems =>
         Items == null ? null :

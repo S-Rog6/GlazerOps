@@ -4,8 +4,10 @@
 @using GlazerOps.Models.Data
 @using GlazerOps.Models.Domain
 @using GlazerOps.Services
+@using ApiJobCard = GlazerOps.Models.JobCard
 @inject Client Sb
 @inject LocalJobsStore LocalJobsStore
+@inject JobCardService JobCardService
 @implements IDisposable
 
 <PageTitle>Jobs</PageTitle>
@@ -85,13 +87,13 @@
 }
 else
 {
-    <CardDisplayArea TItem="Job"
+    <CardDisplayArea TItem="ApiJobCard"
                      Title=""
-                     Items="jobs"
+                     Items="FilteredCardJobs"
                      IsLoading="isLoading"
-                     FilterFunc="FilterJobs">
+                     FilterFunc="FilterCardJobs">
         <ChildContent Context="job">
-            <JobCard Job="job" />
+            <JobCard Card="job" />
         </ChildContent>
     </CardDisplayArea>
 }
@@ -99,6 +101,7 @@ else
 @code {
     private const int MaxJobs = 20;
     private List<Job> jobs = new();
+    private List<ApiJobCard> cardJobs = new();
     private bool isLoading;
     private string? errorMessage;
     private bool showTableView = false;
@@ -107,6 +110,9 @@ else
 
     private IEnumerable<Job> FilteredJobs =>
         jobs.Where(job => FilterJobs(job, filterText));
+
+    private IEnumerable<ApiJobCard> FilteredCardJobs =>
+        cardJobs.Where(job => FilterCardJobs(job, filterText));
 
     protected override async Task OnInitializedAsync()
     {
@@ -124,12 +130,21 @@ else
         {
             var localJobs = await LocalJobsStore.LoadAsync(MaxJobs);
             jobs = localJobs.ToList();
+            cardJobs = jobs.Select(MapDomainToCard).ToList();
+
+            var serviceCards = await JobCardService.GetJobCards();
+            if (serviceCards.Any())
+            {
+                cardJobs = serviceCards.Take(MaxJobs).ToList();
+            }
+
             errorMessage = null;
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine(ex);
             jobs = new List<Job>();
+            cardJobs = new List<ApiJobCard>();
             errorMessage = "Failed to load local jobs cache.";
         }
         finally
@@ -145,7 +160,7 @@ else
         {
             try
             {
-                await LoadJobsFromSupabaseAsync(showLoading: jobs.Count == 0);
+                await LoadJobsFromSupabaseAsync(showLoading: jobs.Count == 0 && cardJobs.Count == 0);
                 await Task.Delay(TimeSpan.FromMinutes(2), cancellationToken);
             }
             catch (OperationCanceledException)
@@ -180,6 +195,8 @@ else
 
         try
         {
+           
+
             var jobsResponse = await Sb.From<JobCardViewData>()
                 .Select("*")
                 .Limit(MaxJobs)
@@ -191,10 +208,13 @@ else
                 .ToList();
 
             await LocalJobsStore.SaveAsync(mappedJobs, MaxJobs);
-
+            var serviceCards = await JobCardService.GetJobCards();
             await InvokeAsync(() =>
             {
                 jobs = mappedJobs;
+                cardJobs = serviceCards.Any()
+                    ? serviceCards.Take(MaxJobs).ToList()
+                    : mappedJobs.Select(MapDomainToCard).ToList();
                 errorMessage = null;
                 StateHasChanged();
             });
@@ -204,7 +224,7 @@ else
             Console.Error.WriteLine(ex);
             await InvokeAsync(() =>
             {
-                if (!jobs.Any())
+                if (!jobs.Any() && !cardJobs.Any())
                 {
                     errorMessage = "Failed to load jobs.";
                 }
@@ -241,6 +261,39 @@ else
             || job.Assigned.Any(a => Contains(a, search))
             || Contains(job.GetCurrentContact()?.Name, search)
             || Contains(job.GetPinnedNotes().FirstOrDefault()?.Note, search);
+    }
+
+    private static bool FilterCardJobs(ApiJobCard? job, string? filter)
+    {
+        if (job is null)
+            return false;
+
+        if (string.IsNullOrWhiteSpace(filter))
+            return true;
+
+        var search = filter.Trim();
+
+        return Contains(job.job_name, search)
+            || Contains(job.po_number?.ToString(), search)
+            || Contains(job.site_name, search)
+            || Contains(job.primary_contacts, search)
+            || Contains(job.all_contacts, search);
+    }
+
+    private static ApiJobCard MapDomainToCard(Job job)
+    {
+        return new ApiJobCard
+        {
+            job_id = job.Id,
+            job_name = job.JobName,
+            po_number = job.PONumber,
+            site_id = job.SiteId,
+            site_name = job.Site?.SiteName ?? string.Empty,
+            address_1 = job.Site?.Address1 ?? string.Empty,
+            address_2 = job.Site?.Address2 ?? string.Empty,
+            primary_contacts = job.GetCurrentContact()?.Name ?? string.Empty,
+            all_contacts = string.Join(", ", job.Contacts.Select(c => c.Name).Where(n => !string.IsNullOrWhiteSpace(n)))
+        };
     }
 
     private static bool Contains(string? source, string value) =>

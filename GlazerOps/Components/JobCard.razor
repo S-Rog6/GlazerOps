@@ -1,25 +1,23 @@
 ﻿@using MudBlazor
-@using GlazerOps.Models.Domain
-@inject NavigationManager Navigation
-@using GlazerOps.Services
-
+@using DomainJob = GlazerOps.Models.Domain.Job
+@using JobCardModel = GlazerOps.Models.JobCard
 
 <MudPaper Class="jc" Elevation="3">
     <div class="jc_leftside">
-        <h2 class="jc_header">@Job?.JobName</h2>
-        <p class="jc_PONumber"> @Job?.PONumber</p>
-        <p class="jc_contacts"><strong>Contacts:</strong> @Job?.GetCurrentContact()?.Name</p>
+        <h2 class="jc_header">@DisplayJobName</h2>
+        <p class="jc_PONumber">@DisplayPONumber</p>
+        <p class="jc_contacts"><strong>Contacts:</strong> @DisplayContacts</p>
     </div>
     <div class="jc_rightside">
-        <p class="jc_sitename"><strong>@Job?.Site?.SiteName</strong></p>
-        @if (!string.IsNullOrWhiteSpace(Job?.Site?.Address1))
+        <p class="jc_sitename"><strong>@DisplaySiteName</strong></p>
+        @if (!string.IsNullOrWhiteSpace(DisplayAddress1))
         {
-            <p class="job-card__location">@Job.Site.Address1</p>
+            <p class="job-card__location">@DisplayAddress1</p>
         }
 
-        @if (!string.IsNullOrWhiteSpace(Job?.Site?.Address2))
+        @if (!string.IsNullOrWhiteSpace(DisplayAddress2))
         {
-            <p class="job-card__location">@Job.Site.Address2</p>
+            <p class="job-card__location">@DisplayAddress2</p>
         }
     </div>
 </MudPaper>
@@ -81,15 +79,30 @@
 
 @code {
     [Parameter]
-    public Job? Job { get; set; }
+    public DomainJob? Job { get; set; }
 
-    public string jName     =>
-        string.IsNullOrWhiteSpace(Job?.JobName) ? "—" : Job!.JobName!;
-    private string jPO => Job?.PONumber is null ? "—" : Job!.PONumber!.ToString();
-    private string jContacts => string.IsNullOrWhiteSpace(Job?.GetCurrentContact()?.Name) ? "—" : Job!.GetCurrentContact()!.Name!;
+    [Parameter]
+    public JobCardModel? Card { get; set; }
 
-    private string sName => string.IsNullOrWhiteSpace(Job?.Site?.SiteName) ? "—" : Job!.Site!.SiteName!;
-    private string AddressLine1 => Job?.Site?.Address1 ?? string.Empty;
-    private string AddressLine2 => Job?.Site?.Address2 ?? string.Empty;
-    
+    private string DisplayJobName =>
+        !string.IsNullOrWhiteSpace(Card?.job_name) ? Card.job_name :
+        !string.IsNullOrWhiteSpace(Job?.JobName) ? Job.JobName : "—";
+
+    private string DisplayPONumber =>
+        Card?.po_number?.ToString()
+        ?? Job?.PONumber?.ToString()
+        ?? "—";
+
+    private string DisplayContacts =>
+        !string.IsNullOrWhiteSpace(Card?.primary_contacts) ? Card.primary_contacts :
+        !string.IsNullOrWhiteSpace(Card?.all_contacts) ? Card.all_contacts :
+        !string.IsNullOrWhiteSpace(Job?.GetCurrentContact()?.Name) ? Job.GetCurrentContact()!.Name : "—";
+
+    private string DisplaySiteName =>
+        !string.IsNullOrWhiteSpace(Card?.site_name) ? Card.site_name :
+        !string.IsNullOrWhiteSpace(Job?.Site?.SiteName) ? Job.Site.SiteName : "—";
+
+    private string DisplayAddress1 => Card?.address_1 ?? Job?.Site?.Address1 ?? string.Empty;
+
+    private string DisplayAddress2 => Card?.address_2 ?? Job?.Site?.Address2 ?? string.Empty;
 }

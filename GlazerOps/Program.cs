@@ -25,6 +25,7 @@ builder.Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri(builder.H
 builder.Services.AddMudServices();
 
 builder.Services.AddScoped<LocalJobsStore>();
+builder.Services.AddScoped<JobCardService>();
 
 // Supabase config
 var supabaseUrl = builder.Configuration["Supabase:Url"];
