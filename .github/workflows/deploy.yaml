@@ -31,7 +31,7 @@ jobs:
           dotnet publish GlazerOps/GlazerOps.csproj -c Release -o release -p:StaticWebAssetBasePath=GlazerOps
 
       - name: Rewrite base href
-        uses: stevesandersonms/ghaction-rewrite-base-href@v1
+        uses: SteveSandersonMS/ghaction-rewrite-base-href@5b54862a8831e012d4f1a8b2660894415fdde8ec
         with:
           html_path: release/wwwroot/index.html
           base_href: /GlazerOps/
