@@ -15,8 +15,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,11 +32,27 @@ jobs:
         run: |
           dotnet publish GlazerOps/GlazerOps.csproj -c Release -o release -p:StaticWebAssetBasePath=GlazerOps
 
-      - name: Rewrite base href
-        uses: SteveSandersonMS/ghaction-rewrite-base-href@5b54862a8831e012d4f1a8b2660894415fdde8ec
+      - name: Disable Jekyll
+        run: touch release/wwwroot/.nojekyll
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          html_path: release/wwwroot/index.html
-          base_href: /GlazerOps/
+          path: release/wwwroot
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4  
+        base_href: /GlazerOps/
 
       - name: Disable Jekyll
         run: touch release/wwwroot/.nojekyll
@@ -53,7 +71,7 @@ jobs:
     steps:
       - name: Deploy
         id: deployment
-        uses: actions/deploy-pages@v4        uses: actions/upload-pages-artifact@v3
+        uses: actions/deploy-pages@v4   
         with:
           path: release/wwwroot
 
