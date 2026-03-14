@@ -50,7 +50,7 @@
                             <td>@job.PONumber</td>
                             <td>@job.JobName</td>
                             <td>@job.SiteName</td>
-                            <td>@(string.IsNullOrWhiteSpace(job.PrimaryContacts) ? job.AllContacts : job.PrimaryContacts)</td>
+                            <td>@job.PrimaryContacts</td>
                         </tr>
                     }
                 }
@@ -117,13 +117,13 @@
         <table class="table table-striped table-hover">
             <thead>
                 <tr>
-                    <th>PO Number</th>
+                    <th>Job ID</th>
                     <th>Job Name</th>
-                    <th>Site</th>
-                    <th>Address</th>
-                    <th>Contact</th>
-                    <th>Assigned</th>
-                    <th>Scheduled Date</th>
+                    <th>PO Number</th>
+                    <th>Site Name</th>
+                    <th>Address 1</th>
+                    <th>Address 2</th>
+                    <th>Primary Contacts</th>
                 </tr>
             </thead>
             <tbody>
@@ -133,7 +133,7 @@
                         <td colspan="7" class="text-center">Loading...</td>
                     </tr>
                 }
-                else if (!LocalJobsStore.Jobs.Any())
+                else if (!FilteredCardJobs.Any())
                 {
                     <tr>
                         <td colspan="7" class="text-center">No jobs found</td>
@@ -141,25 +141,16 @@
                 }
                 else
                 {
-                    @foreach (var job in FilteredJobs)
+                    @foreach (var job in FilteredCardJobs)
                     {
                         <tr>
-                            <td>@job.PONumber</td>
-                            <td>@job.JobName</td>
-                            <td>@job.Site?.SiteName</td>
-                            <td>
-                                @if (!string.IsNullOrWhiteSpace(job.Site?.Address1))
-                                {
-                                    <div>@job.Site.Address1</div>
-                                }
-                                @if (!string.IsNullOrWhiteSpace(job.Site?.Address2))
-                                {
-                                    <div>@job.Site.Address2</div>
-                                }
-                            </td>
-                            <td>@job.GetCurrentContact()?.Name</td>
-                            <td>@string.Join(", ", job.Assigned)</td>
-                            <td>@job.GetPrimaryScheduleDate()?.StartDate.ToString("MM/dd/yyyy")</td>
+                            <td>@job.job_id</td>
+                            <td>@job.job_name</td>
+                            <td>@job.po_number</td>
+                            <td>@job.site_name</td>
+                            <td>@job.address_1</td>
+                            <td>@job.address_2</td>
+                            <td>@job.primary_contacts</td>
                         </tr>
                     }
                 }
@@ -190,10 +181,13 @@ else
     private List<Job> localPreviewJobs = new();
 
     private IEnumerable<Job> FilteredJobs =>
-        LocalJobsStore.Jobs.Where(job => FilterJobs(job, filterText));
+        LocalJobsStore.Jobs
+            .OrderByDescending(job => job.Id)
+            .Where(job => FilterJobs(job, filterText));
 
     private IEnumerable<ApiJobCard> FilteredCardJobs =>
         LocalJobsStore.Jobs
+            .OrderByDescending(job => job.Id)
             .Select(MapDomainToCard)
             .Where(job => FilterCardJobs(job, filterText));
 
@@ -215,7 +209,10 @@ else
 
     private void HandleJobsChanged()
     {
-        localPreviewJobs = LocalJobsStore.Jobs.Take(5).ToList();
+        localPreviewJobs = LocalJobsStore.Jobs
+            .OrderByDescending(job => job.Id)
+            .Take(5)
+            .ToList();
         _ = InvokeAsync(StateHasChanged);
     }
 
@@ -224,7 +221,10 @@ else
         try
         {
             await LocalJobsStore.LoadAsync(MaxJobs);
-            localPreviewJobs = LocalJobsStore.Jobs.Take(5).ToList();
+            localPreviewJobs = LocalJobsStore.Jobs
+                .OrderByDescending(job => job.Id)
+                .Take(5)
+                .ToList();
             errorMessage = null;
         }
         catch (Exception ex)
@@ -241,10 +241,12 @@ else
             var response = await SupabaseClient
                 .From<JobCardViewData>()
                 .Select("*")
+                .Order("job_id", Supabase.Postgrest.Constants.Ordering.Descending)
                 .Limit(5)
                 .Get();
 
             supabasePreviewJobs = (response.Models ?? new List<JobCardViewData>())
+                .OrderByDescending(job => job.JobId)
                 .Take(5)
                 .ToList();
         }
@@ -293,8 +295,7 @@ else
         return Contains(job.job_name, search)
             || Contains(job.po_number?.ToString(), search)
             || Contains(job.site_name, search)
-            || Contains(job.primary_contacts, search)
-            || Contains(job.all_contacts, search);
+            || Contains(job.primary_contacts, search);
     }
 
     private static ApiJobCard MapDomainToCard(Job job)
@@ -304,16 +305,48 @@ else
             job_id = job.Id,
             job_name = job.JobName,
             po_number = job.PONumber,
-            site_id = job.SiteId,
             site_name = job.Site?.SiteName ?? string.Empty,
             address_1 = job.Site?.Address1 ?? string.Empty,
             address_2 = job.Site?.Address2 ?? string.Empty,
             primary_contacts = job.GetCurrentContact()?.Name ?? string.Empty,
-            all_contacts = string.Join(", ", job.Contacts.Select(c => c.Name).Where(n => !string.IsNullOrWhiteSpace(n)))
+            contacts = string.Join(", ", job.Contacts
+                .Where(c => !c.IsPrimary)
+                .Select(FormatContact)
+                .Where(c => !string.IsNullOrWhiteSpace(c))),
+            pinned_notes = string.Join(" | ", job.Notes
+                .Where(n => n.Pinned && !string.IsNullOrWhiteSpace(n.Note))
+                .OrderByDescending(n => n.DateDtg)
+                .Select(n => n.Note)),
+            schedule_dates = string.Join(", ", job.ScheduledDates
+                .OrderBy(d => d.StartDate)
+                .Select(FormatScheduleDate)
+                .Where(d => !string.IsNullOrWhiteSpace(d)))
         };
+    }
+
+    private static string FormatContact(JobContact contact)
+    {
+        if (string.IsNullOrWhiteSpace(contact.Name))
+            return string.Empty;
+
+        return string.IsNullOrWhiteSpace(contact.Phone)
+            ? contact.Name
+            : $"{contact.Name} ({contact.Phone})";
+    }
+
+    private static string FormatScheduleDate(JobScheduleDate schedule)
+    {
+        var start = schedule.StartDate.ToString("MM/dd/yyyy");
+
+        if (schedule.EndDate.HasValue && schedule.EndDate.Value.Date > schedule.StartDate.Date)
+        {
+            return $"{start} - {schedule.EndDate.Value:MM/dd/yyyy}";
+        }
+
+        return start;
     }
 
     private static bool Contains(string? source, string value) =>
         !string.IsNullOrWhiteSpace(source) &&
         source.Contains(value, StringComparison.OrdinalIgnoreCase);
-}
+}}

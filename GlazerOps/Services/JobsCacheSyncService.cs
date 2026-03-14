@@ -82,9 +82,13 @@ public sealed class JobsCacheSyncService : IAsyncDisposable
             var jobCardsResponse = await _supabase
                 .From<JobCardViewData>()
                 .Select("*")
+                .Order("job_id", Supabase.Postgrest.Constants.Ordering.Descending)
+                .Limit(MaxJobs)
                 .Get();
 
-            var jobCards = jobCardsResponse.Models ?? new List<JobCardViewData>();
+            var jobCards = (jobCardsResponse.Models ?? new List<JobCardViewData>())
+                .OrderByDescending(job => job.JobId)
+                .ToList();
 
             var mappedJobs = JobMapper.MapCardViewToDomain(jobCards)
                 .OrderByDescending(job => job.Id)

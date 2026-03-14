@@ -57,10 +57,6 @@ namespace GlazerOps.Models.Data
         [Column("po_number")]
         public long? PONumber { get; set; }
 
-        [JsonPropertyName("site_id")]
-        [Column("site_id")]
-        public long SiteId { get; set; }
-
         [JsonPropertyName("site_name")]
         [Column("site_name")]
         public string? SiteName { get; set; }
@@ -76,10 +72,26 @@ namespace GlazerOps.Models.Data
         [JsonPropertyName("primary_contacts")]
         [Column("primary_contacts")]
         public string PrimaryContacts { get; set; } = string.Empty;
+    }
 
-        [JsonPropertyName("all_contacts")]
-        [Column("all_contacts")]
-        public string AllContacts { get; set; } = string.Empty;
+    [Table("vw_job_card_drawer")]
+    public class JobCardDrawerViewData : BaseModel
+    {
+        [JsonPropertyName("job_id")]
+        [PrimaryKey("job_id", false)]
+        public long JobId { get; set; }
+
+        [JsonPropertyName("contacts")]
+        [Column("contacts")]
+        public string Contacts { get; set; } = string.Empty;
+
+        [JsonPropertyName("pinned_notes")]
+        [Column("pinned_notes")]
+        public string PinnedNotes { get; set; } = string.Empty;
+
+        [JsonPropertyName("schedule_dates")]
+        [Column("schedule_dates")]
+        public string ScheduleDates { get; set; } = string.Empty;
     }
 
     [Table("inspected_buckets")]

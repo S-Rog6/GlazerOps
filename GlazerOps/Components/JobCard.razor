@@ -8,7 +8,12 @@
 @using GlazerOps.Services
 @inject LocalJobsStore LocalJobsStore
 
-<MudPaper Class="jc" Elevation="3">
+<MudPaper Class="@JobCardClass"
+          Elevation="3"
+          role="@CardRole"
+          tabindex="@CardTabIndex"
+          @onclick="ToggleDrawer"
+          @onkeydown="HandleCardKeyDown">
     <div class="jc_leftside">
         <h2 class="jc_header">@_DisplayJobName</h2>
         <p class="jc_PONumber">@DisplayPONumber</p>
@@ -28,6 +33,30 @@
     </div>
 </MudPaper>
 
+@if (HasDrawerContent)
+{
+    <MudPaper Class="jc_drawer" Elevation="1">
+        <MudCollapse Expanded="_isDrawerOpen">
+            <div class="jc_drawer_content">
+                @if (!string.IsNullOrWhiteSpace(DisplayDrawerContacts))
+                {
+                    <p class="jc_drawer_row"><strong>Additional Contacts:</strong> @DisplayDrawerContacts</p>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(DisplayPinnedNotes))
+                {
+                    <p class="jc_drawer_row"><strong>Pinned Notes:</strong> @DisplayPinnedNotes</p>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(DisplayScheduleDates))
+                {
+                    <p class="jc_drawer_row"><strong>Schedule Dates:</strong> @DisplayScheduleDates</p>
+                }
+            </div>
+        </MudCollapse>
+    </MudPaper>
+}
+
 <style>
     .jc {
         display: flex;
@@ -42,6 +71,10 @@
         border-radius: 8px;
         border: 1px solid #000;
         background-color: #ddd;
+    }
+
+    .jc_clickable {
+        cursor: pointer;
     }
 
     .jc_leftside {
@@ -73,6 +106,24 @@
         overflow-wrap: anywhere;
     }
 
+    .jc_drawer {
+        margin: -6px 0 10px 0;
+        padding: 8px 12px;
+        border: 1px solid #999;
+        border-radius: 8px;
+        background-color: #f6f6f6;
+    }
+
+    .jc_drawer_content {
+        margin-top: 8px;
+    }
+
+    .jc_drawer_row {
+        margin: 6px 0;
+        color: #222;
+        overflow-wrap: anywhere;
+    }
+
     @@media (max-width: 768px) {
         .jc {
             flex-direction: column;
@@ -91,6 +142,14 @@
     [Parameter]
     public JobCardModel? Card { get; set; }
 
+    private bool _isDrawerOpen;
+
+    private string JobCardClass => HasDrawerContent ? "jc jc_clickable" : "jc";
+
+    private string? CardRole => HasDrawerContent ? "button" : null;
+
+    private int? CardTabIndex => HasDrawerContent ? 0 : null;
+
     private DomainJob? ResolvedJob =>
         Job
         ?? (Card is null
@@ -108,7 +167,6 @@
 
     private string DisplayContacts =>
         !string.IsNullOrWhiteSpace(Card?.primary_contacts) ? Card.primary_contacts :
-        !string.IsNullOrWhiteSpace(Card?.all_contacts) ? Card.all_contacts :
         !string.IsNullOrWhiteSpace(ResolvedJob?.GetCurrentContact()?.Name) ? ResolvedJob.GetCurrentContact()!.Name : "—";
 
     private string DisplaySiteName =>
@@ -118,4 +176,50 @@
     private string DisplayAddress1 => Card?.address_1 ?? ResolvedJob?.Site?.Address1 ?? string.Empty;
 
     private string DisplayAddress2 => Card?.address_2 ?? ResolvedJob?.Site?.Address2 ?? string.Empty;
+
+    private string DisplayDrawerContacts =>
+        !string.IsNullOrWhiteSpace(Card?.contacts)
+            ? Card.contacts
+            : string.Join(", ", (ResolvedJob?.Contacts ?? Array.Empty<GlazerOps.Models.Domain.JobContact>())
+                .Where(c => !c.IsPrimary)
+                .Select(c => string.IsNullOrWhiteSpace(c.Phone) ? c.Name : $"{c.Name} ({c.Phone})")
+                .Where(c => !string.IsNullOrWhiteSpace(c)));
+
+    private string DisplayPinnedNotes =>
+        !string.IsNullOrWhiteSpace(Card?.pinned_notes)
+            ? Card.pinned_notes
+            : string.Join(" | ", (ResolvedJob?.GetPinnedNotes() ?? Array.Empty<GlazerOps.Models.Domain.JobNote>())
+                .Where(n => !string.IsNullOrWhiteSpace(n.Note))
+                .OrderByDescending(n => n.DateDtg)
+                .Select(n => n.Note));
+
+    private string DisplayScheduleDates =>
+        !string.IsNullOrWhiteSpace(Card?.schedule_dates)
+            ? Card.schedule_dates
+            : string.Join(", ", (ResolvedJob?.ScheduledDates ?? Array.Empty<GlazerOps.Models.Domain.JobScheduleDate>())
+                .OrderBy(d => d.StartDate)
+                .Select(d => d.EndDate.HasValue && d.EndDate.Value.Date > d.StartDate.Date
+                    ? $"{d.StartDate:MM/dd/yyyy} - {d.EndDate.Value:MM/dd/yyyy}"
+                    : $"{d.StartDate:MM/dd/yyyy}"));
+
+    private bool HasDrawerContent =>
+        !string.IsNullOrWhiteSpace(DisplayDrawerContacts)
+        || !string.IsNullOrWhiteSpace(DisplayPinnedNotes)
+        || !string.IsNullOrWhiteSpace(DisplayScheduleDates);
+
+    private void ToggleDrawer()
+    {
+        if (!HasDrawerContent)
+            return;
+
+        _isDrawerOpen = !_isDrawerOpen;
+    }
+
+    private void HandleCardKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key is "Enter" or " ")
+        {
+            ToggleDrawer();
+        }
+    }
 }
