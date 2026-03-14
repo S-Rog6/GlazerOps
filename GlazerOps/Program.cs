@@ -25,6 +25,7 @@ builder.Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri(builder.H
 builder.Services.AddMudServices();
 
 builder.Services.AddScoped<LocalJobsStore>();
+builder.Services.AddScoped<JobsCacheSyncService>();
 
 // Supabase config
 var supabaseUrl = builder.Configuration["Supabase:Url"];
@@ -55,4 +56,4 @@ var supabase = host.Services.GetRequiredService<Client>();
 // IMPORTANT: initialize it
 await supabase.InitializeAsync();
 
-await host.RunAsync();await host.RunAsync();
+await host.RunAsync();

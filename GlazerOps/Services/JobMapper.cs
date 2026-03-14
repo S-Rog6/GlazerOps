@@ -120,24 +120,30 @@ namespace GlazerOps.Services
 
         public static Job MapCardViewToDomain(JobCardViewData data)
         {
+            var contactName = !string.IsNullOrWhiteSpace(data.PrimaryContacts)
+                ? data.PrimaryContacts
+                : data.AllContacts;
+
             return new Job
             {
                 Id = data.JobId,
                 PONumber = data.PONumber,
                 JobName = data.JobName,
+                SiteId = data.SiteId,
                 Site = new Site
                 {
+                    Id = data.SiteId,
                     SiteName = data.SiteName ?? string.Empty,
                     Address1 = data.Address1,
                     Address2 = data.Address2
                 },
-                Contacts = string.IsNullOrWhiteSpace(data.Contacts)
+                Contacts = string.IsNullOrWhiteSpace(contactName)
                     ? Array.Empty<JobContact>()
                     : new[]
                     {
                         new JobContact
                         {
-                            Name = data.Contacts
+                            Name = contactName
                         }
                     }
             };

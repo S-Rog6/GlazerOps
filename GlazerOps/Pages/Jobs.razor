@@ -1,9 +1,14 @@
 ﻿@page "/jobs"
 @using GlazerOps.Components
+@using GlazerOps.Models.Data
 @using GlazerOps.Models.Domain
 @using GlazerOps.Services
+@using Supabase
 @using ApiJobCard = GlazerOps.Models.JobCardModel
 @inject LocalJobsStore LocalJobsStore
+@inject Client SupabaseClient
+@inject JobsCacheSyncService JobsCacheSync
+@implements IDisposable
 
 <PageTitle>Jobs</PageTitle>
 
@@ -11,6 +16,88 @@
 {
     <div class="alert alert-danger">@errorMessage</div>
 }
+
+<div class="mb-4">
+    <h5>Supabase (Top 5)</h5>
+    <div class="table-responsive mb-3">
+        <table class="table table-sm table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>PO Number</th>
+                    <th>Job Name</th>
+                    <th>Site</th>
+                    <th>Contact</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (isLoading)
+                {
+                    <tr>
+                        <td colspan="4" class="text-center">Loading...</td>
+                    </tr>
+                }
+                else if (!supabasePreviewJobs.Any())
+                {
+                    <tr>
+                        <td colspan="4" class="text-center">No Supabase rows found</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var job in supabasePreviewJobs)
+                    {
+                        <tr>
+                            <td>@job.PONumber</td>
+                            <td>@job.JobName</td>
+                            <td>@job.SiteName</td>
+                            <td>@(string.IsNullOrWhiteSpace(job.PrimaryContacts) ? job.AllContacts : job.PrimaryContacts)</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <h5>Local Cache (Top 5)</h5>
+    <div class="table-responsive">
+        <table class="table table-sm table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>PO Number</th>
+                    <th>Job Name</th>
+                    <th>Site</th>
+                    <th>Contact</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (isLoading)
+                {
+                    <tr>
+                        <td colspan="4" class="text-center">Loading...</td>
+                    </tr>
+                }
+                else if (!localPreviewJobs.Any())
+                {
+                    <tr>
+                        <td colspan="4" class="text-center">No local rows found</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var job in localPreviewJobs)
+                    {
+                        <tr>
+                            <td>@job.PONumber</td>
+                            <td>@job.JobName</td>
+                            <td>@job.Site?.SiteName</td>
+                            <td>@job.GetCurrentContact()?.Name</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h3>Jobs</h3>
@@ -46,7 +133,7 @@
                         <td colspan="7" class="text-center">Loading...</td>
                     </tr>
                 }
-                else if (!jobs.Any())
+                else if (!LocalJobsStore.Jobs.Any())
                 {
                     <tr>
                         <td colspan="7" class="text-center">No jobs found</td>
@@ -95,40 +182,78 @@ else
 
 @code {
     private const int MaxJobs = 20;
-    private List<Job> jobs = new();
-    private List<ApiJobCard> cardJobs = new();
     private bool isLoading;
     private string? errorMessage;
     private bool showTableView = false;
     private string filterText = string.Empty;
+    private List<JobCardViewData> supabasePreviewJobs = new();
+    private List<Job> localPreviewJobs = new();
 
     private IEnumerable<Job> FilteredJobs =>
-        jobs.Where(job => FilterJobs(job, filterText));
+        LocalJobsStore.Jobs.Where(job => FilterJobs(job, filterText));
 
     private IEnumerable<ApiJobCard> FilteredCardJobs =>
-        cardJobs.Where(job => FilterCardJobs(job, filterText));
+        LocalJobsStore.Jobs
+            .Select(MapDomainToCard)
+            .Where(job => FilterCardJobs(job, filterText));
 
     protected override async Task OnInitializedAsync()
     {
+        LocalJobsStore.Changed += HandleJobsChanged;
         isLoading = true;
+
         await LoadJobsFromLocalAsync();
+        await JobsCacheSync.StartAsync();
+        await JobsCacheSync.RefreshNowAsync();
+        await LoadSupabasePreviewAsync();
+    }
+
+    public void Dispose()
+    {
+        LocalJobsStore.Changed -= HandleJobsChanged;
+    }
+
+    private void HandleJobsChanged()
+    {
+        localPreviewJobs = LocalJobsStore.Jobs.Take(5).ToList();
+        _ = InvokeAsync(StateHasChanged);
     }
 
     private async Task LoadJobsFromLocalAsync()
     {
         try
         {
-            var localJobs = await LocalJobsStore.LoadAsync(MaxJobs);
-            jobs = localJobs.ToList();
-            cardJobs = jobs.Select(MapDomainToCard).ToList();
+            await LocalJobsStore.LoadAsync(MaxJobs);
+            localPreviewJobs = LocalJobsStore.Jobs.Take(5).ToList();
             errorMessage = null;
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine(ex);
-            jobs = new List<Job>();
-            cardJobs = new List<ApiJobCard>();
             errorMessage = "Failed to load local jobs cache.";
+        }
+    }
+
+    private async Task LoadSupabasePreviewAsync()
+    {
+        try
+        {
+            var response = await SupabaseClient
+                .From<JobCardViewData>()
+                .Select("*")
+                .Limit(5)
+                .Get();
+
+            supabasePreviewJobs = (response.Models ?? new List<JobCardViewData>())
+                .Take(5)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex);
+            errorMessage = string.IsNullOrWhiteSpace(errorMessage)
+                ? "Failed to load Supabase preview rows."
+                : $"{errorMessage} Failed to load Supabase preview rows.";
         }
         finally
         {

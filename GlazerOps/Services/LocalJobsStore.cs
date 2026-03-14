@@ -9,11 +9,16 @@ public sealed class LocalJobsStore
     private const string StorageKey = "jobs.cache";
     private readonly IJSRuntime _jsRuntime;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private List<Job> _jobs = new();
 
     public LocalJobsStore(IJSRuntime jsRuntime)
     {
         _jsRuntime = jsRuntime;
     }
+
+    public IReadOnlyList<Job> Jobs => _jobs;
+
+    public event Action? Changed;
 
     public async Task<IReadOnlyList<Job>> LoadAsync(int maxCount)
     {
@@ -21,18 +26,26 @@ public sealed class LocalJobsStore
 
         if (string.IsNullOrWhiteSpace(json))
         {
-            return Array.Empty<Job>();
+            _jobs = new List<Job>();
+            NotifyStateChanged();
+            return _jobs;
         }
 
         try
         {
-            var jobs = JsonSerializer.Deserialize<List<Job>>(json, JsonOptions) ?? new List<Job>();
-            return jobs.Take(maxCount).ToList();
+            _jobs = (JsonSerializer.Deserialize<List<Job>>(json, JsonOptions) ?? new List<Job>())
+                .Take(maxCount)
+                .ToList();
+
+            NotifyStateChanged();
+            return _jobs;
         }
         catch
         {
             await _jsRuntime.InvokeVoidAsync("storageInterop.removeItem", StorageKey);
-            return Array.Empty<Job>();
+            _jobs = new List<Job>();
+            NotifyStateChanged();
+            return _jobs;
         }
     }
 
@@ -41,5 +54,12 @@ public sealed class LocalJobsStore
         var payload = jobs.Take(maxCount).ToList();
         var json = JsonSerializer.Serialize(payload, JsonOptions);
         await _jsRuntime.InvokeVoidAsync("storageInterop.setItem", StorageKey, json);
+        _jobs = payload;
+        NotifyStateChanged();
+    }
+
+    private void NotifyStateChanged()
+    {
+        Changed?.Invoke();
     }
 }

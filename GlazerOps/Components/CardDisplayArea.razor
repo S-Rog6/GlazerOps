@@ -2,6 +2,8 @@
 @using MudBlazor.Components
 @using GlazerOps.Components
 @using GlazerOps.Models
+@using GlazerOps.Services
+@using DomainJob = GlazerOps.Models.Domain.Job
 @typeparam TItem
 @using Microsoft.AspNetCore.Components;
 @inherits ComponentBase
@@ -90,6 +92,9 @@
 </style>
 
 @code {
+    [Inject]
+    public LocalJobsStore LocalJobsStore { get; set; } = null!;
+
     [Parameter]
     public string Title { get; set; } = string.Empty;
 
@@ -114,9 +119,12 @@
     [Parameter]
     public string EmptyText { get; set; } = "No items to display";
 
+    private IEnumerable<TItem>? EffectiveItems =>
+        Items ?? (typeof(TItem) == typeof(DomainJob) ? LocalJobsStore.Jobs.Cast<TItem>() : null);
+
     private IEnumerable<TItem>? FilteredItems =>
-        Items == null ? null :
-        string.IsNullOrWhiteSpace(CardFilter) ? Items :
-        FilterFunc != null ? Items.Where(item => FilterFunc(item, CardFilter)) :
-        Items;
+        EffectiveItems == null ? null :
+        string.IsNullOrWhiteSpace(CardFilter) ? EffectiveItems :
+        FilterFunc != null ? EffectiveItems.Where(item => FilterFunc(item, CardFilter)) :
+        EffectiveItems;
 }

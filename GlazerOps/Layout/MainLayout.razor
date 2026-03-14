@@ -1,6 +1,7 @@
 ﻿@inherits LayoutComponentBase
 @inject Supabase.Client Sb
 @inject NavigationManager Nav
+@inject GlazerOps.Services.JobsCacheSyncService JobsCacheSync
 @using MudBlazor
 
 
@@ -30,6 +31,12 @@
         if (Sb.Auth.CurrentUser is null && path != "/login" && !path.StartsWith("/auth/"))
         {
             Nav.NavigateTo("/login");
+            return;
+        }
+
+        if (Sb.Auth.CurrentUser is not null)
+        {
+            await JobsCacheSync.StartAsync();
         }
     }
 }

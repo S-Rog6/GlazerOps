@@ -50,22 +50,36 @@ namespace GlazerOps.Models.Data
         public long JobId { get; set; }
 
         [JsonPropertyName("job_name")]
+        [Column("job_name")]
         public string JobName { get; set; } = string.Empty;
 
         [JsonPropertyName("po_number")]
+        [Column("po_number")]
         public long? PONumber { get; set; }
 
+        [JsonPropertyName("site_id")]
+        [Column("site_id")]
+        public long SiteId { get; set; }
+
         [JsonPropertyName("site_name")]
+        [Column("site_name")]
         public string? SiteName { get; set; }
 
         [JsonPropertyName("address_1")]
+        [Column("address_1")]
         public string? Address1 { get; set; }
 
         [JsonPropertyName("address_2")]
+        [Column("address_2")]
         public string? Address2 { get; set; }
 
-        [JsonPropertyName("contacts")]
-        public string? Contacts { get; set; }
+        [JsonPropertyName("primary_contacts")]
+        [Column("primary_contacts")]
+        public string PrimaryContacts { get; set; } = string.Empty;
+
+        [JsonPropertyName("all_contacts")]
+        [Column("all_contacts")]
+        public string AllContacts { get; set; } = string.Empty;
     }
 
     [Table("inspected_buckets")]

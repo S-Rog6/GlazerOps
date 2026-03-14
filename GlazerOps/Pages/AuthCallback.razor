@@ -1,6 +1,7 @@
 ﻿@page "/auth/callback"
 @inject Supabase.Client Sb
 @inject NavigationManager Nav
+@inject GlazerOps.Services.JobsCacheSyncService JobsCacheSync
 
 <h3>Signing you in…</h3>
 
@@ -8,11 +9,14 @@
     protected override async Task OnInitializedAsync()
     {
         var uri = new Uri(Nav.Uri);
-        var fragment = uri.Fragment.TrimStart('#');
 
-        if (!string.IsNullOrWhiteSpace(fragment))
+        var tokenSource = !string.IsNullOrWhiteSpace(uri.Fragment)
+            ? uri.Fragment.TrimStart('#')
+            : uri.Query.TrimStart('?');
+
+        if (!string.IsNullOrWhiteSpace(tokenSource))
         {
-            var tokens = fragment.Split('&')
+            var tokens = tokenSource.Split('&', StringSplitOptions.RemoveEmptyEntries)
                 .Select(p => p.Split('=', 2))
                 .Where(p => p.Length == 2)
                 .ToDictionary(p => p[0], p => Uri.UnescapeDataString(p[1]));
@@ -22,11 +26,21 @@
             {
                 await Sb.Auth.SetSession(accessToken, refreshToken);
             }
+            else
+            {
+                await Sb.Auth.RetrieveSessionAsync();
+            }
         }
         else
         {
             // Fallback: load an existing persisted session (e.g. hard refresh)
             await Sb.Auth.RetrieveSessionAsync();
+        }
+
+        if (Sb.Auth.CurrentUser is not null)
+        {
+            await JobsCacheSync.StartAsync();
+            await JobsCacheSync.RefreshNowAsync();
         }
 
         Nav.NavigateTo("/");
