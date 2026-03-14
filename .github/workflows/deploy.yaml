@@ -15,8 +15,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,13 +30,48 @@ jobs:
 
       - name: Publish Blazor
         run: |
-          dotnet publish GlazerOps/GlazerOps.csproj -c Release -o release -p:StaticWebAssetBasePath=/GlazerOps
+          dotnet publish GlazerOps/GlazerOps.csproj -c Release -o release -p:StaticWebAssetBasePath=GlazerOps
 
       - name: Disable Jekyll
         run: touch release/wwwroot/.nojekyll
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
+        with:
+          path: release/wwwroot
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4  
+        base_href: /GlazerOps/
+
+      - name: Disable Jekyll
+        run: touch release/wwwroot/.nojekyll
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: release/wwwroot
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4   
         with:
           path: release/wwwroot
 
