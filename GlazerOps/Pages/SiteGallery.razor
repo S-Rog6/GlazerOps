@@ -1,0 +1,11 @@
+@page "/sites/{siteId:int}/gallery"
+@using Microsoft.AspNetCore.Components
+
+<PageTitle>Site Gallery</PageTitle>
+
+<h2>Site Gallery</h2>
+<p>Images and media for site #@siteId.</p>
+
+@code {
+    [Parameter] public int siteId { get; set; }
+}

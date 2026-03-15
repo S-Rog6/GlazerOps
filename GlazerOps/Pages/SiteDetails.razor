@@ -1,0 +1,18 @@
+@page "/sites/{siteId:int}"
+@using Microsoft.AspNetCore.Components
+
+<PageTitle>Site Details</PageTitle>
+
+<h2>Site Details</h2>
+<p>Viewing site #@siteId.</p>
+
+<div class="d-flex gap-2 flex-wrap">
+    <a class="btn btn-primary" href="@($"/sites/{siteId}/edit")">Edit Site</a>
+    <a class="btn btn-outline-primary" href="@($"/sites/{siteId}/notes")">Notes</a>
+    <a class="btn btn-outline-primary" href="@($"/sites/{siteId}/plans")">Plans</a>
+    <a class="btn btn-outline-primary" href="@($"/sites/{siteId}/gallery")">Gallery</a>
+</div>
+
+@code {
+    [Parameter] public int siteId { get; set; }
+}

@@ -1,0 +1,11 @@
+@page "/jobs/{jobId:int}/gallery"
+@using Microsoft.AspNetCore.Components
+
+<PageTitle>Job Gallery</PageTitle>
+
+<h2>Job Gallery</h2>
+<p>Images and media for job #@jobId.</p>
+
+@code {
+    [Parameter] public int jobId { get; set; }
+}

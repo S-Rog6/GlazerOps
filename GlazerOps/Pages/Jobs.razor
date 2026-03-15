@@ -18,89 +18,21 @@
 }
 
 <div class="mb-4">
-    <h5>Supabase (Top 5)</h5>
-    <div class="table-responsive mb-3">
-        <table class="table table-sm table-striped table-hover">
-            <thead>
-                <tr>
-                    <th>PO Number</th>
-                    <th>Job Name</th>
-                    <th>Site</th>
-                    <th>Contact</th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (isLoading)
-                {
-                    <tr>
-                        <td colspan="4" class="text-center">Loading...</td>
-                    </tr>
-                }
-                else if (!supabasePreviewJobs.Any())
-                {
-                    <tr>
-                        <td colspan="4" class="text-center">No Supabase rows found</td>
-                    </tr>
-                }
-                else
-                {
-                    @foreach (var job in supabasePreviewJobs)
-                    {
-                        <tr>
-                            <td>@job.PONumber</td>
-                            <td>@job.JobName</td>
-                            <td>@job.SiteName</td>
-                            <td>@job.PrimaryContacts</td>
-                        </tr>
-                    }
-                }
-            </tbody>
-        </table>
-    </div>
-
-    <h5>Local Cache (Top 5)</h5>
-    <div class="table-responsive">
-        <table class="table table-sm table-striped table-hover">
-            <thead>
-                <tr>
-                    <th>PO Number</th>
-                    <th>Job Name</th>
-                    <th>Site</th>
-                    <th>Contact</th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (isLoading)
-                {
-                    <tr>
-                        <td colspan="4" class="text-center">Loading...</td>
-                    </tr>
-                }
-                else if (!localPreviewJobs.Any())
-                {
-                    <tr>
-                        <td colspan="4" class="text-center">No local rows found</td>
-                    </tr>
-                }
-                else
-                {
-                    @foreach (var job in localPreviewJobs)
-                    {
-                        <tr>
-                            <td>@job.PONumber</td>
-                            <td>@job.JobName</td>
-                            <td>@job.Site?.SiteName</td>
-                            <td>@job.GetCurrentContact()?.Name</td>
-                        </tr>
-                    }
-                }
-            </tbody>
-        </table>
-    </div>
 </div>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h3>Jobs</h3>
+    <div class="btn-group" role="group">
+        <a class="btn btn-outline-secondary" href="/jobs/editor">Job Entry / Editor</a>
+        <a class="btn btn-outline-secondary" href="/jobs/1">Job Details</a>
+        <a class="btn btn-outline-secondary" href="/jobs/1/notes">Job Notes</a>
+        <a class="btn btn-outline-secondary" href="/jobs/1/plans">Job Plans</a>
+        <a class="btn btn-outline-secondary" href="/jobs/1/gallery">Job Gallery</a>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Jobs View</h3>
     <div class="btn-group" role="group">
         <button type="button" class="btn @(showTableView ? "btn-outline-primary" : "btn-primary")" @onclick="() => showTableView = false">
             Card View
@@ -349,4 +281,4 @@ else
     private static bool Contains(string? source, string value) =>
         !string.IsNullOrWhiteSpace(source) &&
         source.Contains(value, StringComparison.OrdinalIgnoreCase);
-}}
+}

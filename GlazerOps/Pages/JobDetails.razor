@@ -1,0 +1,18 @@
+@page "/jobs/{jobId:int}"
+@using Microsoft.AspNetCore.Components
+
+<PageTitle>Job Details</PageTitle>
+
+<h2>Job Details</h2>
+<p>Viewing job #@jobId.</p>
+
+<div class="d-flex gap-2 flex-wrap">
+    <a class="btn btn-primary" href="@($"/jobs/{jobId}/edit")">Edit Job</a>
+    <a class="btn btn-outline-primary" href="@($"/jobs/{jobId}/notes")">Notes</a>
+    <a class="btn btn-outline-primary" href="@($"/jobs/{jobId}/plans")">Plans</a>
+    <a class="btn btn-outline-primary" href="@($"/jobs/{jobId}/gallery")">Gallery</a>
+</div>
+
+@code {
+    [Parameter] public int jobId { get; set; }
+}
