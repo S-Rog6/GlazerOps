@@ -51,8 +51,7 @@ jobs:
     steps:
       - name: Deploy
         id: deployment
-        uses: actions/deploy-pages@v4  
-        base_href: /GlazerOps/
+        uses: actions/deploy-pages@v4
 
       - name: Disable Jekyll
         run: touch release/wwwroot/.nojekyll
@@ -74,14 +73,3 @@ jobs:
         uses: actions/deploy-pages@v4   
         with:
           path: release/wwwroot
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy
-        id: deployment
-        uses: actions/deploy-pages@v4
