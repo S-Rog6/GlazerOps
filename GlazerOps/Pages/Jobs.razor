@@ -8,6 +8,7 @@
 @inject LocalJobsStore LocalJobsStore
 @inject Client SupabaseClient
 @inject JobsCacheSyncService JobsCacheSync
+@inject NavigationManager NavigationManager
 @implements IDisposable
 
 <PageTitle>Jobs</PageTitle>
@@ -74,7 +75,7 @@
                 {
                     @foreach (var job in FilteredCardJobs)
                     {
-                        <tr>
+                        <tr style="cursor: pointer;" @onclick="() => NavigateToJobDetails(job.job_id)">
                             <td>@job.job_name</td>
                             <td>@job.po_number</td>
                             <td>@job.primary_contact</td>
@@ -193,6 +194,14 @@ else
         }
     }
 
+    private void NavigateToJobDetails(long jobId)
+    {
+        if (jobId <= 0)
+            return;
+
+        NavigationManager.NavigateTo($"/jobs/{jobId}");
+    }
+
     private static bool FilterJobs(Job? job, string? filter)
     {
         if (job is null)
@@ -278,4 +287,4 @@ else
     private static bool Contains(string? source, string value) =>
         !string.IsNullOrWhiteSpace(source) &&
         source.Contains(value, StringComparison.OrdinalIgnoreCase);
-}}
+}

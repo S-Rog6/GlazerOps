@@ -5,10 +5,11 @@
 @using DomainJob = GlazerOps.Models.Domain.Job
 @using JobCardModel = GlazerOps.Models.JobCardModel
 @inject Client SupabaseClient
+@inject NavigationManager NavigationManager
 
 <MudCard Class="jc">
     <MudCardContent>
-        <div class="jc_summary">
+        <div class="jc_summary" @onclick="NavigateToJobDetails">
             <div class="jc_leftside">
                 <p class="jc_header">@DisplayJobName</p>
                 <p class="jc_poNumber">@DisplayPONumber</p>
@@ -83,6 +84,7 @@
         justify-content: space-between;
         align-items: flex-start;
         gap: 16px;
+        cursor: pointer;
     }
 
     .jc_leftside {
@@ -197,6 +199,16 @@
             DrawerPinnedNotes = Placeholder;
             DrawerScheduleDates = Placeholder;
         }
+    }
+
+    private void NavigateToJobDetails()
+    {
+        if (CurrentJobId is null or <= 0)
+        {
+            return;
+        }
+
+        NavigationManager.NavigateTo($"/jobs/{CurrentJobId.Value}");
     }
 
     private async Task ToggleDrawerAsync()
