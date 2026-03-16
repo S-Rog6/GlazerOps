@@ -29,7 +29,7 @@ jobs:
 
       - name: Publish Blazor
         run: |
-          dotnet publish GlazerOps/GlazerOps.csproj -c Release -o release -p:StaticWebAssetBasePath=GlazerOps
+          dotnet publish GlazerOps/GlazerOps.csproj -c Release -o release
 
       - name: Disable Jekyll
         run: touch release/wwwroot/.nojekyll
