@@ -14,7 +14,7 @@
 
         public string address_2 { get; set; } = "";
 
-        public string primary_contacts { get; set; } = "";
+        public string primary_contact { get; set; } = "";
 
         public string contacts { get; set; } = "";
 

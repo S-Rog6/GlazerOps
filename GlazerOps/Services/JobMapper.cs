@@ -133,13 +133,13 @@ namespace GlazerOps.Services
                     Address1 = data.Address1,
                     Address2 = data.Address2
                 },
-                Contacts = string.IsNullOrWhiteSpace(data.PrimaryContacts)
+                Contacts = string.IsNullOrWhiteSpace(data.PrimaryContact)
                     ? Array.Empty<JobContact>()
                     : new[]
                     {
                         new JobContact
                         {
-                            Name = data.PrimaryContacts
+                            Name = data.PrimaryContact
                         }
                     }
             };

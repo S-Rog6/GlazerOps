@@ -9,10 +9,13 @@
 @inherits ComponentBase
 
 <MudPaper Class="cda">
-    <div class="cda-header">
-        <h3>@Title</h3>
-    </div>
-    
+    @if (!string.IsNullOrWhiteSpace(Title))
+    {
+        <div class="cda-header">
+            <h3>@Title</h3>
+        </div>
+    }
+
     <div class="cda-content">
         @if (IsLoading)
         {
@@ -21,7 +24,25 @@
                 <p>@LoadingText</p>
             </div>
         }
-        else if (FilteredItems == null || !FilteredItems.Any())
+        else if (HasJobIds)
+        {
+            @if (!MatchedJobs.Any())
+            {
+                <div class="empty-state">
+                    <p>@EmptyText</p>
+                </div>
+            }
+            else
+            {
+                <div class="cards-grid">
+                    @foreach (var job in MatchedJobs)
+                    {
+                        <JobCard Job="job" />
+                    }
+                </div>
+            }
+        }
+        else if (FilteredItems == null || !FilteredItems.Any() || ChildContent is null)
         {
             <div class="empty-state">
                 <p>@EmptyText</p>
@@ -47,7 +68,6 @@
         min-height: 300px;
         width: 100%;
         margin: 16px;
-        
     }
 
     .cda-header {
@@ -62,14 +82,12 @@
     }
 
     .cda-content {
-        
         padding: 16px;
-
     }
 
     .cards-grid {
-        display: block;
-        
+        display: flex;
+        flex-direction: column;
         gap: 16px;
     }
 
@@ -102,10 +120,13 @@
     public string CardFilter { get; set; } = string.Empty;
 
     [Parameter]
+    public IEnumerable<long>? JobIds { get; set; }
+
+    [Parameter]
     public IEnumerable<TItem>? Items { get; set; }
 
     [Parameter]
-    public RenderFragment<TItem> ChildContent { get; set; } = null!;
+    public RenderFragment<TItem>? ChildContent { get; set; }
 
     [Parameter]
     public Func<TItem, string, bool>? FilterFunc { get; set; }
@@ -118,6 +139,20 @@
 
     [Parameter]
     public string EmptyText { get; set; } = "No items to display";
+
+    private bool HasJobIds => JobIds is not null;
+
+    private IReadOnlyList<DomainJob> MatchedJobs =>
+        !HasJobIds
+            ? Array.Empty<DomainJob>()
+            : JobIds!
+                .Distinct()
+                .Join(
+                    LocalJobsStore.Jobs,
+                    id => id,
+                    job => job.Id,
+                    (id, job) => job)
+                .ToList();
 
     private IEnumerable<TItem>? EffectiveItems =>
         Items ?? (typeof(TItem) == typeof(DomainJob) ? LocalJobsStore.Jobs.Cast<TItem>() : null);
