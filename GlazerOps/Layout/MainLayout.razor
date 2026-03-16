@@ -27,10 +27,10 @@
     {
         await Sb.Auth.RetrieveSessionAsync();
 
-        var path = new Uri(Nav.Uri).AbsolutePath;
-        if (Sb.Auth.CurrentUser is null && path != "/login" && !path.StartsWith("/auth/"))
+        var relativePath = Nav.ToBaseRelativePath(new Uri(Nav.Uri).GetLeftPart(UriPartial.Path));
+        if (Sb.Auth.CurrentUser is null && relativePath != "login" && !relativePath.StartsWith("auth/"))
         {
-            Nav.NavigateTo("/login");
+            Nav.NavigateTo("login");
             return;
         }
 
