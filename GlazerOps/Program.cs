@@ -31,6 +31,7 @@ builder.Services.AddScoped(_ => new HttpClient
 builder.Services.AddMudServices();
 
 builder.Services.AddScoped<LocalJobsStore>();
+builder.Services.AddScoped<JobsCacheSyncService>();
 
 // Supabase config
 var supabaseUrl = builder.Configuration["Supabase:Url"];

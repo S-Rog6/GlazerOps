@@ -1,0 +1,11 @@
+@page "/jobs/{jobId:int}/notes"
+@using Microsoft.AspNetCore.Components
+
+<PageTitle>Job Notes</PageTitle>
+
+<h2>Job Notes</h2>
+<p>Notes for job #@jobId.</p>
+
+@code {
+    [Parameter] public int jobId { get; set; }
+}

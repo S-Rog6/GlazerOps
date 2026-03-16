@@ -125,19 +125,21 @@ namespace GlazerOps.Services
                 Id = data.JobId,
                 PONumber = data.PONumber,
                 JobName = data.JobName,
+                SiteId = 0,
                 Site = new Site
                 {
+                    Id = 0,
                     SiteName = data.SiteName ?? string.Empty,
                     Address1 = data.Address1,
                     Address2 = data.Address2
                 },
-                Contacts = string.IsNullOrWhiteSpace(data.Contacts)
+                Contacts = string.IsNullOrWhiteSpace(data.PrimaryContact)
                     ? Array.Empty<JobContact>()
                     : new[]
                     {
                         new JobContact
                         {
-                            Name = data.Contacts
+                            Name = data.PrimaryContact
                         }
                     }
             };

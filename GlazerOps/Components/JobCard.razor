@@ -1,42 +1,90 @@
 ﻿@using GlazerOps.Models
+@using GlazerOps.Models.Data
 @using MudBlazor
+@using Supabase
 @using DomainJob = GlazerOps.Models.Domain.Job
 @using JobCardModel = GlazerOps.Models.JobCardModel
+@inject Client SupabaseClient
+@inject NavigationManager NavigationManager
 
-<MudPaper Class="jc" Elevation="3">
-    <div class="jc_leftside">
-        <h2 class="jc_header">@_DisplayJobName</h2>
-        <p class="jc_PONumber">@DisplayPONumber</p>
-        <p class="jc_contacts"><strong>Contacts:</strong> @DisplayContacts</p>
-    </div>
-    <div class="jc_rightside">
-        <p class="jc_sitename"><strong>@DisplaySiteName</strong></p>
-        @if (!string.IsNullOrWhiteSpace(DisplayAddress1))
-        {
-            <p class="jc_location">@DisplayAddress1</p>
-        }
+<MudCard Class="jc">
+    <MudCardContent>
+        <div class="jc_summary" @onclick="NavigateToJobDetails">
+            <div class="jc_leftside">
+                <p class="jc_header">@DisplayJobName</p>
+                <p class="jc_poNumber">@DisplayPONumber</p>
+                <p class="jc_contacts">@DisplayPrimaryContacts</p>
+            </div>
 
-        @if (!string.IsNullOrWhiteSpace(DisplayAddress2))
-        {
-            <p class="jc_location">@DisplayAddress2</p>
-        }
-    </div>
-</MudPaper>
+            <div class="jc_rightside">
+                <p class="jc_sitename"><strong>@DisplaySiteName</strong></p>
+
+                @if (!string.IsNullOrWhiteSpace(DisplayAddress1))
+                {
+                    <p class="jc_location">@DisplayAddress1</p>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(DisplayAddress2))
+                {
+                    <p class="jc_location">@DisplayAddress2</p>
+                }
+            </div>
+        </div>
+    </MudCardContent>
+
+    <MudCardActions Class="jc_actions">
+        <MudButton Variant="Variant.Text"
+                   Color="Color.Primary"
+                   Size="Size.Small"
+                   StartIcon="@DrawerToggleIcon"
+                   OnClick="ToggleDrawerAsync">
+            @DrawerToggleText
+        </MudButton>
+    </MudCardActions>
+
+    <MudCollapse Expanded="@IsDrawerExpanded">
+        <MudDivider />
+        <MudCardContent Class="jc_drawer">
+            @if (IsDrawerLoading)
+            {
+                <MudText Typo="Typo.body2">Loading details...</MudText>
+            }
+            else
+            {
+                <div class="jc_drawer_row">
+                    <strong>Additional Contacts:</strong>
+                    <span>@DrawerContacts</span>
+                </div>
+                <div class="jc_drawer_row">
+                    <strong>Pinned Notes:</strong>
+                    <span>@DrawerPinnedNotes</span>
+                </div>
+                <div class="jc_drawer_row">
+                    <strong>Schedule Dates:</strong>
+                    <span>@DrawerScheduleDates</span>
+                </div>
+            }
+        </MudCardContent>
+    </MudCollapse>
+</MudCard>
 
 <style>
     .jc {
-        display: flex;
         width: 100%;
         margin-bottom: 10px;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 16px;
-        width: 100%;
         padding: 12px;
         box-sizing: border-box;
         border-radius: 8px;
         border: 1px solid #000;
         background-color: #ddd;
+    }
+
+    .jc_summary {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        cursor: pointer;
     }
 
     .jc_leftside {
@@ -52,14 +100,13 @@
     }
 
     .jc_header {
-        display: flex;
         margin: 0 0 8px 0;
         font-size: 1.25em;
         color: #c00;
         overflow-wrap: anywhere;
     }
 
-    .jc_PONumber,
+    .jc_poNumber,
     .jc_contacts,
     .jc_sitename,
     .jc_location {
@@ -68,8 +115,25 @@
         overflow-wrap: anywhere;
     }
 
+    .jc_actions {
+        padding-top: 0;
+    }
+
+    .jc_drawer {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .jc_drawer_row {
+        display: flex;
+        flex-direction: column;
+        color: #111;
+        overflow-wrap: anywhere;
+    }
+
     @@media (max-width: 768px) {
-        .jc {
+        .jc_summary {
             flex-direction: column;
         }
 
@@ -80,31 +144,223 @@
 </style>
 
 @code {
-    [Parameter]
-    public DomainJob? Job { get; set; }
+    [Parameter] public DomainJob? Job { get; set; }
+    [Parameter] public JobCardModel? Card { get; set; }
 
-    [Parameter]
-    public JobCardModel? Card { get; set; }
+    private const string Placeholder = "—";
 
-    private string _DisplayJobName =>
-        !string.IsNullOrWhiteSpace(Card?.job_name) ? Card.job_name :
-        !string.IsNullOrWhiteSpace(Job?.JobName) ? Job.JobName : "—";
+    private string DisplayJobName { get; set; } = Placeholder;
+    private string DisplayPONumber { get; set; } = Placeholder;
+    private string DisplayPrimaryContacts { get; set; } = Placeholder;
+    private string DisplaySiteName { get; set; } = Placeholder;
+    private string DisplayAddress1 { get; set; } = string.Empty;
+    private string DisplayAddress2 { get; set; } = string.Empty;
 
-    private string DisplayPONumber =>
-        Card?.po_number?.ToString()
-        ?? Job?.PONumber?.ToString()
-        ?? "—";
+    private long? CurrentJobId { get; set; }
+    private bool IsDrawerExpanded { get; set; }
+    private bool IsDrawerLoading { get; set; }
+    private bool IsDrawerLoaded { get; set; }
+    private string DrawerContacts { get; set; } = Placeholder;
+    private string DrawerPinnedNotes { get; set; } = Placeholder;
+    private string DrawerScheduleDates { get; set; } = Placeholder;
 
-    private string DisplayContacts =>
-        !string.IsNullOrWhiteSpace(Card?.primary_contacts) ? Card.primary_contacts :
-        !string.IsNullOrWhiteSpace(Card?.all_contacts) ? Card.all_contacts :
-        !string.IsNullOrWhiteSpace(Job?.GetCurrentContact()?.Name) ? Job.GetCurrentContact()!.Name : "—";
+    private string DrawerToggleText => IsDrawerExpanded ? "Hide Details" : "Show Details";
+    private string DrawerToggleIcon => IsDrawerExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore;
 
-    private string DisplaySiteName =>
-        !string.IsNullOrWhiteSpace(Card?.site_name) ? Card.site_name :
-        !string.IsNullOrWhiteSpace(Job?.Site?.SiteName) ? Job.Site.SiteName : "—";
+    protected override void OnParametersSet()
+    {
+        DisplayJobName = FirstNonBlank(Card?.job_name, Job?.JobName, Placeholder);
+        DisplayPONumber = Card?.po_number?.ToString()
+                          ?? Job?.PONumber?.ToString()
+                          ?? Placeholder;
 
-    private string DisplayAddress1 => Card?.address_1 ?? Job?.Site?.Address1 ?? string.Empty;
+        DisplayPrimaryContacts = FirstNonBlank(
+            Card?.primary_contact,
+            Job?.GetCurrentContact()?.Name,
+            Placeholder);
 
-    private string DisplayAddress2 => Card?.address_2 ?? Job?.Site?.Address2 ?? string.Empty;
+        DisplaySiteName = FirstNonBlank(
+            Card?.site_name,
+            Job?.Site?.SiteName,
+            Placeholder);
+
+        DisplayAddress1 = Card?.address_1 ?? Job?.Site?.Address1 ?? string.Empty;
+        DisplayAddress2 = Card?.address_2 ?? Job?.Site?.Address2 ?? string.Empty;
+
+        var incomingJobId = Card?.job_id ?? Job?.Id;
+
+        if (CurrentJobId != incomingJobId)
+        {
+            CurrentJobId = incomingJobId;
+            IsDrawerExpanded = false;
+            IsDrawerLoading = false;
+            IsDrawerLoaded = false;
+            DrawerContacts = Placeholder;
+            DrawerPinnedNotes = Placeholder;
+            DrawerScheduleDates = Placeholder;
+        }
+    }
+
+    private void NavigateToJobDetails()
+    {
+        if (CurrentJobId is null or <= 0)
+        {
+            return;
+        }
+
+        NavigationManager.NavigateTo($"/jobs/{CurrentJobId.Value}");
+    }
+
+    private async Task ToggleDrawerAsync()
+    {
+        IsDrawerExpanded = !IsDrawerExpanded;
+
+        if (IsDrawerExpanded && !IsDrawerLoaded)
+        {
+            await LoadDrawerDataAsync();
+        }
+    }
+
+    private async Task LoadDrawerDataAsync()
+    {
+        IsDrawerLoading = true;
+
+        try
+        {
+            var drawerData = await LoadDrawerDataFromSupabaseAsync();
+
+            if (drawerData is null)
+            {
+                ApplyFallbackDrawerData();
+            }
+            else
+            {
+                DrawerContacts = FirstNonBlank(drawerData.Contacts, Placeholder);
+                DrawerPinnedNotes = FirstNonBlank(drawerData.PinnedNotes, Placeholder);
+                DrawerScheduleDates = FirstNonBlank(drawerData.ScheduleDates, Placeholder);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to load job drawer data for {CurrentJobId}: {ex}");
+            ApplyFallbackDrawerData();
+        }
+        finally
+        {
+            IsDrawerLoading = false;
+            IsDrawerLoaded = true;
+        }
+    }
+
+    private async Task<JobCardDrawerViewData?> LoadDrawerDataFromSupabaseAsync()
+    {
+        if (CurrentJobId is null or 0)
+        {
+            return null;
+        }
+
+        var response = await SupabaseClient
+            .From<JobCardDrawerViewData>()
+            .Select("*")
+            .Filter("job_id", Supabase.Postgrest.Constants.Operator.Equals, CurrentJobId.Value.ToString())
+            .Limit(1)
+            .Get();
+
+        return response.Models?.FirstOrDefault();
+    }
+
+    private void ApplyFallbackDrawerData()
+    {
+        DrawerContacts = FirstNonBlank(
+            Card?.contacts,
+            BuildSecondaryContactsFromJob(),
+            Placeholder);
+
+        DrawerPinnedNotes = FirstNonBlank(
+            Card?.pinned_notes,
+            BuildPinnedNotesFromJob(),
+            Placeholder);
+
+        DrawerScheduleDates = FirstNonBlank(
+            Card?.schedule_dates,
+            BuildScheduleDatesFromJob(),
+            Placeholder);
+    }
+
+    private string BuildSecondaryContactsFromJob()
+    {
+        if (Job?.Contacts is null || Job.Contacts.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        return string.Join(", ",
+            Job.Contacts
+                .Where(contact => !contact.IsPrimary)
+                .Select(FormatContact)
+                .Where(contact => !string.IsNullOrWhiteSpace(contact)));
+    }
+
+    private string BuildPinnedNotesFromJob()
+    {
+        if (Job?.Notes is null || Job.Notes.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        return string.Join(" | ",
+            Job.Notes
+                .Where(note => note.Pinned && !string.IsNullOrWhiteSpace(note.Note))
+                .OrderByDescending(note => note.DateDtg)
+                .Select(note => note.Note));
+    }
+
+    private string BuildScheduleDatesFromJob()
+    {
+        if (Job?.ScheduledDates is null || Job.ScheduledDates.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        return string.Join(", ",
+            Job.ScheduledDates
+                .OrderBy(schedule => schedule.StartDate)
+                .Select(FormatScheduleDate)
+                .Where(schedule => !string.IsNullOrWhiteSpace(schedule)));
+    }
+
+    private static string FormatContact(GlazerOps.Models.Domain.JobContact contact)
+    {
+        if (string.IsNullOrWhiteSpace(contact.Name))
+        {
+            return string.Empty;
+        }
+
+        return string.IsNullOrWhiteSpace(contact.Phone)
+            ? contact.Name
+            : $"{contact.Name} ({contact.Phone})";
+    }
+
+    private static string FormatScheduleDate(GlazerOps.Models.Domain.JobScheduleDate schedule)
+    {
+        var start = schedule.StartDate.ToString("MM/dd/yyyy");
+
+        if (schedule.EndDate.HasValue && schedule.EndDate.Value.Date > schedule.StartDate.Date)
+        {
+            return $"{start} - {schedule.EndDate.Value:MM/dd/yyyy}";
+        }
+
+        return start;
+    }
+
+    private static string FirstNonBlank(params string?[] values)
+    {
+        for (int i = 0; i < values.Length; i++)
+        {
+            if (!string.IsNullOrWhiteSpace(values[i]))
+                return values[i]!;
+        }
+
+        return string.Empty;
+    }
 }

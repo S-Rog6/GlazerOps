@@ -1,0 +1,91 @@
+@page "/jobs/{jobId:int}"
+@using GlazerOps.Models.Data
+@using Microsoft.AspNetCore.Components
+@using Supabase
+@inject Client SupabaseClient
+
+<PageTitle>Job Details</PageTitle>
+
+<h2>Job Details</h2>
+
+@if (isLoading)
+{
+    <p>Loading job #@jobId...</p>
+}
+else if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+else if (job is null)
+{
+    <p>Job #@jobId was not found.</p>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h4 class="card-title">@job.JobName</h4>
+            <p class="mb-1"><strong>Job ID:</strong> @job.Id</p>
+            <p class="mb-1"><strong>PO Number:</strong> @(job.PONumber?.ToString() ?? "—")</p>
+            <p class="mb-1"><strong>Site ID:</strong> @job.SiteId</p>
+            <p class="mb-1"><strong>Owner User ID:</strong> @(job.OwnerUserId?.ToString() ?? "—")</p>
+            <p class="mb-1"><strong>Site Name:</strong> @(job.Site?.SiteName ?? "—")</p>
+            <p class="mb-1"><strong>Address 1:</strong> @(job.Site?.Address1 ?? "—")</p>
+            <p class="mb-1"><strong>Address 2:</strong> @(job.Site?.Address2 ?? "—")</p>
+            <p class="mb-0"><strong>Assigned:</strong> @FormatArray(job.Assigned)</p>
+        </div>
+    </div>
+}
+
+<div class="d-flex gap-2 flex-wrap">
+    <a class="btn btn-primary" href="@($"/jobs/{jobId}/edit")">Edit Job</a>
+    <a class="btn btn-outline-primary" href="@($"/jobs/{jobId}/notes")">Notes</a>
+    <a class="btn btn-outline-primary" href="@($"/jobs/{jobId}/plans")">Plans</a>
+    <a class="btn btn-outline-primary" href="@($"/jobs/{jobId}/gallery")">Gallery</a>
+</div>
+
+@code {
+    [Parameter] public int jobId { get; set; }
+
+    private JobData? job;
+    private bool isLoading;
+    private string? errorMessage;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var response = await SupabaseClient
+                .From<JobData>()
+                .Select("id, job_name, po_number, site_id, assigned, contact_ids, site:sites(id, site_name, address_1, address_2)")
+                .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, jobId.ToString())
+                .Limit(1)
+                .Get();
+
+            job = response.Models?.FirstOrDefault();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex);
+            errorMessage = $"Failed to load job #{jobId}.";
+            job = null;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private static string FormatArray(string[]? values)
+    {
+        if (values is null || values.Length == 0)
+        {
+            return "—";
+        }
+
+        return string.Join(", ", values);
+    }
+}

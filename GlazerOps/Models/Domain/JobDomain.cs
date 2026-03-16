@@ -1,7 +1,7 @@
 namespace GlazerOps.Models.Domain
 {
     /// <summary>
-    /// Domain model for Job - represents business logic and behavior.
+    /// Domain model for a job and its related business entities.
     /// </summary>
     public class Job
     {
@@ -19,24 +19,27 @@ namespace GlazerOps.Models.Domain
         public JobNote[] Notes { get; set; } = Array.Empty<JobNote>();
 
         /// <summary>
-        /// Gets a contact for this job.
+        /// Returns the first available contact for the job, if one exists.
         /// </summary>
         public JobContact? GetCurrentContact() =>
             Contacts.FirstOrDefault();
 
         /// <summary>
-        /// Gets the earliest scheduled date for this job.
+        /// Returns the earliest scheduled start date for the job, if one exists.
         /// </summary>
         public JobScheduleDate? GetPrimaryScheduleDate() =>
             ScheduledDates.OrderBy(d => d.StartDate).FirstOrDefault();
 
         /// <summary>
-        /// Gets pinned notes for this job.
+        /// Returns all notes marked as pinned for the job.
         /// </summary>
         public JobNote[] GetPinnedNotes() =>
             Notes.Where(n => n.Pinned).ToArray();
     }
 
+    /// <summary>
+    /// Represents an expected-bucket lookup record used by job planning workflows.
+    /// </summary>
     public class ExpectedBucket
     {
         public int Id { get; set; }
@@ -44,6 +47,9 @@ namespace GlazerOps.Models.Domain
         public DateTime? CreatedAt { get; set; }
     }
 
+    /// <summary>
+    /// Represents a site associated with one or more jobs.
+    /// </summary>
     public class Site
     {
         public long Id { get; set; }
@@ -52,6 +58,9 @@ namespace GlazerOps.Models.Domain
         public string? Address2 { get; set; }
     }
 
+    /// <summary>
+    /// Represents a contact linked to a job.
+    /// </summary>
     public class JobContact
     {
         public long Id { get; set; }
@@ -62,6 +71,9 @@ namespace GlazerOps.Models.Domain
         public bool IsPrimary { get; set; }
     }
 
+    /// <summary>
+    /// Represents a scheduled date range linked to a job.
+    /// </summary>
     public class JobScheduleDate
     {
         public long Id { get; set; }
@@ -70,6 +82,9 @@ namespace GlazerOps.Models.Domain
         public DateTime? EndDate { get; set; }
     }
 
+    /// <summary>
+    /// Represents a note attached to a job.
+    /// </summary>
     public class JobNote
     {
         public long Id { get; set; }
@@ -81,6 +96,9 @@ namespace GlazerOps.Models.Domain
         public Guid? OwnerUserId { get; set; }
     }
 
+    /// <summary>
+    /// Represents an uploaded user file payload associated with job import/sync processing.
+    /// </summary>
     public class UserFileJob
     {
         public long Id { get; set; }
@@ -90,6 +108,9 @@ namespace GlazerOps.Models.Domain
         public DateTime? CreatedAt { get; set; }
     }
 
+    /// <summary>
+    /// Represents a contact stored at the site level.
+    /// </summary>
     public class SiteContact
     {
         public long Id { get; set; }

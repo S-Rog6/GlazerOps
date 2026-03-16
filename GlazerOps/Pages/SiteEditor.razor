@@ -1,0 +1,20 @@
+@page "/sites/editor"
+@page "/sites/{siteId:int}/edit"
+@using Microsoft.AspNetCore.Components
+
+<PageTitle>Site Entry / Editor</PageTitle>
+
+<h2>Site Entry / Editor</h2>
+
+@if (siteId.HasValue)
+{
+    <p>Editing site #@siteId.Value.</p>
+}
+else
+{
+    <p>Creating a new site.</p>
+}
+
+@code {
+    [Parameter] public int? siteId { get; set; }
+}

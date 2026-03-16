@@ -1,9 +1,15 @@
 ﻿@page "/jobs"
 @using GlazerOps.Components
+@using GlazerOps.Models.Data
 @using GlazerOps.Models.Domain
 @using GlazerOps.Services
+@using Supabase
 @using ApiJobCard = GlazerOps.Models.JobCardModel
 @inject LocalJobsStore LocalJobsStore
+@inject Client SupabaseClient
+@inject JobsCacheSyncService JobsCacheSync
+@inject NavigationManager NavigationManager
+@implements IDisposable
 
 <PageTitle>Jobs</PageTitle>
 
@@ -12,8 +18,22 @@
     <div class="alert alert-danger">@errorMessage</div>
 }
 
+<div class="mb-4">
+</div>
+
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h3>Jobs</h3>
+    <div class="btn-group" role="group">
+        <a class="btn btn-outline-secondary" href="/jobs/editor">Job Entry / Editor</a>
+        <a class="btn btn-outline-secondary" href="/jobs/1">Job Details</a>
+        <a class="btn btn-outline-secondary" href="/jobs/1/notes">Job Notes</a>
+        <a class="btn btn-outline-secondary" href="/jobs/1/plans">Job Plans</a>
+        <a class="btn btn-outline-secondary" href="/jobs/1/gallery">Job Gallery</a>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Jobs View</h3>
     <div class="btn-group" role="group">
         <button type="button" class="btn @(showTableView ? "btn-outline-primary" : "btn-primary")" @onclick="() => showTableView = false">
             Card View
@@ -30,49 +50,38 @@
         <table class="table table-striped table-hover">
             <thead>
                 <tr>
-                    <th>PO Number</th>
                     <th>Job Name</th>
-                    <th>Site</th>
-                    <th>Address</th>
-                    <th>Contact</th>
-                    <th>Assigned</th>
-                    <th>Scheduled Date</th>
+                    <th>PO Number</th>
+                    <th>Contacts</th>
+                    <th>Site Name</th>
+                    <th>Address 1</th>
+                    <th>Address 2</th>
                 </tr>
             </thead>
             <tbody>
                 @if (isLoading)
                 {
                     <tr>
-                        <td colspan="7" class="text-center">Loading...</td>
+                        <td colspan="6" class="text-center">Loading...</td>
                     </tr>
                 }
-                else if (!jobs.Any())
+                else if (!FilteredCardJobs.Any())
                 {
                     <tr>
-                        <td colspan="7" class="text-center">No jobs found</td>
+                        <td colspan="6" class="text-center">No jobs found</td>
                     </tr>
                 }
                 else
                 {
-                    @foreach (var job in FilteredJobs)
+                    @foreach (var job in FilteredCardJobs)
                     {
-                        <tr>
-                            <td>@job.PONumber</td>
-                            <td>@job.JobName</td>
-                            <td>@job.Site?.SiteName</td>
-                            <td>
-                                @if (!string.IsNullOrWhiteSpace(job.Site?.Address1))
-                                {
-                                    <div>@job.Site.Address1</div>
-                                }
-                                @if (!string.IsNullOrWhiteSpace(job.Site?.Address2))
-                                {
-                                    <div>@job.Site.Address2</div>
-                                }
-                            </td>
-                            <td>@job.GetCurrentContact()?.Name</td>
-                            <td>@string.Join(", ", job.Assigned)</td>
-                            <td>@job.GetPrimaryScheduleDate()?.StartDate.ToString("MM/dd/yyyy")</td>
+                        <tr style="cursor: pointer;" @onclick="() => NavigateToJobDetails(job.job_id)">
+                            <td>@job.job_name</td>
+                            <td>@job.po_number</td>
+                            <td>@job.primary_contact</td>
+                            <td>@job.site_name</td>
+                            <td>@job.address_1</td>
+                            <td>@job.address_2</td>
                         </tr>
                     }
                 }
@@ -82,59 +91,115 @@
 }
 else
 {
-    <CardDisplayArea TItem="ApiJobCard"
+    <CardDisplayArea TItem="Job"
                      Title=""
-                     Items="FilteredCardJobs"
+                     JobIds="FilteredJobIds"
                      IsLoading="isLoading"
-                     FilterFunc="FilterCardJobs">
-        <ChildContent Context="job">
-            <JobCard Card="job" />
-        </ChildContent>
-    </CardDisplayArea>
+                     EmptyText="No jobs found" />
 }
 
 @code {
     private const int MaxJobs = 20;
-    private List<Job> jobs = new();
-    private List<ApiJobCard> cardJobs = new();
     private bool isLoading;
     private string? errorMessage;
     private bool showTableView = false;
     private string filterText = string.Empty;
+    private List<JobCardViewData> supabasePreviewJobs = new();
+    private List<Job> localPreviewJobs = new();
 
     private IEnumerable<Job> FilteredJobs =>
-        jobs.Where(job => FilterJobs(job, filterText));
+        LocalJobsStore.Jobs
+            .OrderByDescending(job => job.Id)
+            .Where(job => FilterJobs(job, filterText));
+
+    private IEnumerable<long> FilteredJobIds =>
+        FilteredJobs.Select(job => job.Id);
 
     private IEnumerable<ApiJobCard> FilteredCardJobs =>
-        cardJobs.Where(job => FilterCardJobs(job, filterText));
+        LocalJobsStore.Jobs
+            .OrderByDescending(job => job.Id)
+            .Select(MapDomainToCard)
+            .Where(job => FilterCardJobs(job, filterText));
 
     protected override async Task OnInitializedAsync()
     {
+        LocalJobsStore.Changed += HandleJobsChanged;
         isLoading = true;
+
         await LoadJobsFromLocalAsync();
+        await JobsCacheSync.StartAsync();
+        await JobsCacheSync.RefreshNowAsync();
+        await LoadSupabasePreviewAsync();
+    }
+
+    public void Dispose()
+    {
+        LocalJobsStore.Changed -= HandleJobsChanged;
+    }
+
+    private void HandleJobsChanged()
+    {
+        localPreviewJobs = LocalJobsStore.Jobs
+            .OrderByDescending(job => job.Id)
+            .Take(5)
+            .ToList();
+        _ = InvokeAsync(StateHasChanged);
     }
 
     private async Task LoadJobsFromLocalAsync()
     {
         try
         {
-            var localJobs = await LocalJobsStore.LoadAsync(MaxJobs);
-            jobs = localJobs.ToList();
-            cardJobs = jobs.Select(MapDomainToCard).ToList();
+            await LocalJobsStore.LoadAsync(MaxJobs);
+            localPreviewJobs = LocalJobsStore.Jobs
+                .OrderByDescending(job => job.Id)
+                .Take(5)
+                .ToList();
             errorMessage = null;
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine(ex);
-            jobs = new List<Job>();
-            cardJobs = new List<ApiJobCard>();
             errorMessage = "Failed to load local jobs cache.";
+        }
+    }
+
+    private async Task LoadSupabasePreviewAsync()
+    {
+        try
+        {
+            var response = await SupabaseClient
+                .From<JobCardViewData>()
+                .Select("*")
+                .Order("job_id", Supabase.Postgrest.Constants.Ordering.Descending)
+                .Limit(5)
+                .Get();
+
+            supabasePreviewJobs = (response.Models ?? new List<JobCardViewData>())
+                .OrderByDescending(job => job.JobId)
+                .Take(5)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex);
+            errorMessage = string.IsNullOrWhiteSpace(errorMessage)
+                ? "Failed to load Supabase preview rows."
+                : $"{errorMessage} Failed to load Supabase preview rows.";
         }
         finally
         {
             isLoading = false;
             await InvokeAsync(StateHasChanged);
         }
+    }
+
+    private void NavigateToJobDetails(long jobId)
+    {
+        if (jobId <= 0)
+            return;
+
+        NavigationManager.NavigateTo($"/jobs/{jobId}");
     }
 
     private static bool FilterJobs(Job? job, string? filter)
@@ -168,8 +233,7 @@ else
         return Contains(job.job_name, search)
             || Contains(job.po_number?.ToString(), search)
             || Contains(job.site_name, search)
-            || Contains(job.primary_contacts, search)
-            || Contains(job.all_contacts, search);
+            || Contains(job.primary_contact, search);
     }
 
     private static ApiJobCard MapDomainToCard(Job job)
@@ -179,13 +243,45 @@ else
             job_id = job.Id,
             job_name = job.JobName,
             po_number = job.PONumber,
-            site_id = job.SiteId,
             site_name = job.Site?.SiteName ?? string.Empty,
             address_1 = job.Site?.Address1 ?? string.Empty,
             address_2 = job.Site?.Address2 ?? string.Empty,
-            primary_contacts = job.GetCurrentContact()?.Name ?? string.Empty,
-            all_contacts = string.Join(", ", job.Contacts.Select(c => c.Name).Where(n => !string.IsNullOrWhiteSpace(n)))
+            primary_contact = job.GetCurrentContact()?.Name ?? string.Empty,
+            contacts = string.Join(", ", job.Contacts
+                .Where(c => !c.IsPrimary)
+                .Select(FormatContact)
+                .Where(c => !string.IsNullOrWhiteSpace(c))),
+            pinned_notes = string.Join(" | ", job.Notes
+                .Where(n => n.Pinned && !string.IsNullOrWhiteSpace(n.Note))
+                .OrderByDescending(n => n.DateDtg)
+                .Select(n => n.Note)),
+            schedule_dates = string.Join(", ", job.ScheduledDates
+                .OrderBy(d => d.StartDate)
+                .Select(FormatScheduleDate)
+                .Where(d => !string.IsNullOrWhiteSpace(d)))
         };
+    }
+
+    private static string FormatContact(JobContact contact)
+    {
+        if (string.IsNullOrWhiteSpace(contact.Name))
+            return string.Empty;
+
+        return string.IsNullOrWhiteSpace(contact.Phone)
+            ? contact.Name
+            : $"{contact.Name} ({contact.Phone})";
+    }
+
+    private static string FormatScheduleDate(JobScheduleDate schedule)
+    {
+        var start = schedule.StartDate.ToString("MM/dd/yyyy");
+
+        if (schedule.EndDate.HasValue && schedule.EndDate.Value.Date > schedule.StartDate.Date)
+        {
+            return $"{start} - {schedule.EndDate.Value:MM/dd/yyyy}";
+        }
+
+        return start;
     }
 
     private static bool Contains(string? source, string value) =>

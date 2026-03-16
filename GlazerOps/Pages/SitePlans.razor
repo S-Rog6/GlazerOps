@@ -1,0 +1,11 @@
+@page "/sites/{siteId:int}/plans"
+@using Microsoft.AspNetCore.Components
+
+<PageTitle>Site Plans</PageTitle>
+
+<h2>Site Plans</h2>
+<p>Plan documents for site #@siteId.</p>
+
+@code {
+    [Parameter] public int siteId { get; set; }
+}

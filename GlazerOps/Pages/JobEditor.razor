@@ -1,0 +1,20 @@
+@page "/jobs/editor"
+@page "/jobs/{jobId:int}/edit"
+@using Microsoft.AspNetCore.Components
+
+<PageTitle>Job Entry / Editor</PageTitle>
+
+<h2>Job Entry / Editor</h2>
+
+@if (jobId.HasValue)
+{
+    <p>Editing job #@jobId.Value.</p>
+}
+else
+{
+    <p>Creating a new job.</p>
+}
+
+@code {
+    [Parameter] public int? jobId { get; set; }
+}
