@@ -69,9 +69,9 @@ namespace GlazerOps.Models.Data
         [Column("address_2")]
         public string? Address2 { get; set; }
 
-        [JsonPropertyName("primary_contacts")]
-        [Column("primary_contacts")]
-        public string PrimaryContacts { get; set; } = string.Empty;
+        [JsonPropertyName("primary_contact")]
+        [Column("primary_contact")]
+        public string PrimaryContact { get; set; } = string.Empty;
     }
 
     [Table("vw_job_card_drawer")]

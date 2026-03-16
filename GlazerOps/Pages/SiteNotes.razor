@@ -1,0 +1,11 @@
+@page "/sites/{siteId:int}/notes"
+@using Microsoft.AspNetCore.Components
+
+<PageTitle>Site Notes</PageTitle>
+
+<h2>Site Notes</h2>
+<p>Notes for site #@siteId.</p>
+
+@code {
+    [Parameter] public int siteId { get; set; }
+}

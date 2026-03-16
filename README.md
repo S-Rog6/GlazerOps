@@ -18,6 +18,7 @@ It is built as a `Blazor WebAssembly` app with a Supabase backend so it can run 
 - View scheduled dates per job
 - View pinned and recent job notes
 - Search/filter jobs by key fields
+- Expand/collapse notes on job cards in the jobs list
 
 ## Project Structure
 
@@ -32,6 +33,16 @@ GlazerOps/
 ├─ wwwroot/           # Static files and app settings
 └─ Program.cs         # App bootstrap and DI setup
 ```
+
+## Domain Model Notes
+
+`GlazerOps/Models/Domain/JobDomain.cs` contains the main job-centric domain entities.
+
+The `Job` model also includes helper methods used by UI and mapping layers:
+
+- `GetCurrentContact()` returns the first available contact.
+- `GetPrimaryScheduleDate()` returns the earliest `StartDate`.
+- `GetPinnedNotes()` returns only notes where `Pinned == true`.
 
 ## Supabase Schema (Current)
 
