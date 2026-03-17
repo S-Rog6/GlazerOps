@@ -59,10 +59,4 @@ builder.Services.AddScoped(sp =>
 
 var host = builder.Build();
 
-// Get the Supabase client from DI
-var supabase = host.Services.GetRequiredService<Client>();
-
-// Initialize it
-await supabase.InitializeAsync();
-
 await host.RunAsync();
