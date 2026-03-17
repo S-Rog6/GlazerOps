@@ -1,48 +1,46 @@
-﻿@page "/auth/callback"
+@page "/auth/callback"
 @inject Supabase.Client Sb
 @inject NavigationManager Nav
-@inject GlazerOps.Services.JobsCacheSyncService JobsCacheSync
 
 <h3>Signing you in…</h3>
 
 @code {
     protected override async Task OnInitializedAsync()
     {
-        var uri = new Uri(Nav.Uri);
-
-        var tokenSource = !string.IsNullOrWhiteSpace(uri.Fragment)
-            ? uri.Fragment.TrimStart('#')
-            : uri.Query.TrimStart('?');
-
-        if (!string.IsNullOrWhiteSpace(tokenSource))
+        try
         {
-            var tokens = tokenSource.Split('&', StringSplitOptions.RemoveEmptyEntries)
-                .Select(p => p.Split('=', 2))
-                .Where(p => p.Length == 2)
-                .ToDictionary(p => p[0], p => Uri.UnescapeDataString(p[1]));
+            var uri = new Uri(Nav.Uri);
 
-            if (tokens.TryGetValue("access_token", out var accessToken) &&
-                tokens.TryGetValue("refresh_token", out var refreshToken))
+            var tokenSource = !string.IsNullOrWhiteSpace(uri.Fragment)
+                ? uri.Fragment.TrimStart('#')
+                : uri.Query.TrimStart('?');
+
+            if (!string.IsNullOrWhiteSpace(tokenSource))
             {
-                await Sb.Auth.SetSession(accessToken, refreshToken);
+                var tokens = tokenSource.Split('&', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(p => p.Split('=', 2))
+                    .Where(p => p.Length == 2)
+                    .ToDictionary(p => p[0], p => Uri.UnescapeDataString(p[1]));
+
+                if (tokens.TryGetValue("access_token", out var accessToken) &&
+                    tokens.TryGetValue("refresh_token", out var refreshToken))
+                {
+                    await Sb.Auth.SetSession(accessToken, refreshToken);
+                }
+                else
+                {
+                    await Sb.Auth.RetrieveSessionAsync();
+                }
             }
             else
             {
                 await Sb.Auth.RetrieveSessionAsync();
             }
         }
-        else
+        catch
         {
-            // Fallback: load an existing persisted session (e.g. hard refresh)
-            await Sb.Auth.RetrieveSessionAsync();
         }
 
-        if (Sb.Auth.CurrentUser is not null)
-        {
-            await JobsCacheSync.StartAsync();
-            await JobsCacheSync.RefreshNowAsync();
-        }
-
-        Nav.NavigateTo("/");
+        Nav.NavigateTo("/", forceLoad: true);
     }
 }
