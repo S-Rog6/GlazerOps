@@ -13,21 +13,29 @@
             <div class="jc_leftside">
                 <p class="jc_header">@DisplayJobName</p>
                 <p class="jc_poNumber">@DisplayPONumber</p>
-                <p class="jc_contacts">@DisplayPrimaryContacts</p>
+                <p class="jc_contacts">
+                    @if (!string.IsNullOrWhiteSpace(DisplayPrimaryContacts))
+                    {
+                        <span>@DisplayPrimaryContacts</span>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(DisplayPrimaryContacts) && !string.IsNullOrWhiteSpace(DisplayPrimaryContactPhone))
+                    {
+                        <span>: </span>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(DisplayPrimaryContactPhone))
+                    {
+                        <PhoneLink PhoneNumber="@DisplayPrimaryContactPhone" />
+                    }
+                </p>
             </div>
 
             <div class="jc_rightside">
-                <p class="jc_sitename"><strong>@DisplaySiteName</strong></p>
-
-                @if (!string.IsNullOrWhiteSpace(DisplayAddress1))
-                {
-                    <p class="jc_location">@DisplayAddress1</p>
-                }
-
-                @if (!string.IsNullOrWhiteSpace(DisplayAddress2))
-                {
-                    <p class="jc_location">@DisplayAddress2</p>
-                }
+                <AddressLink BuildingName="@DisplaySiteName"
+                             AddressLine1="@DisplayAddress1"
+                             AddressLine2="@DisplayAddress2"
+                             FullAddress="@DisplayFullAddress" />
             </div>
         </div>
     </MudCardContent>
@@ -152,9 +160,11 @@
     private string DisplayJobName { get; set; } = Placeholder;
     private string DisplayPONumber { get; set; } = Placeholder;
     private string DisplayPrimaryContacts { get; set; } = Placeholder;
+    private string DisplayPrimaryContactPhone { get; set; } = string.Empty;
     private string DisplaySiteName { get; set; } = Placeholder;
     private string DisplayAddress1 { get; set; } = string.Empty;
     private string DisplayAddress2 { get; set; } = string.Empty;
+    private string DisplayFullAddress { get; set; } = string.Empty;
 
     private long? CurrentJobId { get; set; }
     private bool IsDrawerExpanded { get; set; }
@@ -186,6 +196,9 @@
 
         DisplayAddress1 = Card?.address_1 ?? Job?.Site?.Address1 ?? string.Empty;
         DisplayAddress2 = Card?.address_2 ?? Job?.Site?.Address2 ?? string.Empty;
+        DisplayFullAddress = string.Join(" ", new[] { DisplayAddress1, DisplayAddress2 }
+            .Where(x => !string.IsNullOrWhiteSpace(x)));
+        DisplayPrimaryContactPhone = Job?.GetCurrentContact()?.Phone ?? string.Empty;
 
         var incomingJobId = Card?.job_id ?? Job?.Id;
 
