@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GlazerOps</title>
-    <base href="/" />
+    <base href="/GlazerOps/" />
     <link rel="preload" id="webassembly" />
     <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="_content/MudBlazor/MudBlazor.min.css" />
@@ -45,23 +45,23 @@
 
     <div id="blazor-error-ui">
         An unhandled error has occurred.
-        <a href="." class="reload">Reload</a>
+        <a href="" class="reload">Reload</a>
         <span class="dismiss">🗙</span>
     </div>
+
     <script src="js/storageInterop.js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+
     <script>
-        // navigator.permissions.query is a native method that requires this === navigator.permissions.
-        // The Blazor WASM VM dispatches native calls without re-attaching the stored receiver
-        // (p.DO(...p.L) instead of p.DO.call(p.Ax, ...p.L)), so pre-bind query here before
-        // the runtime loads to make every call site work regardless of invocation context.
         (function () {
             if (navigator.permissions && typeof navigator.permissions.query === 'function') {
                 navigator.permissions.query = navigator.permissions.query.bind(navigator.permissions);
             }
         })();
     </script>
-    <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+
+    <script src="_framework/blazor.webassembly.js"></script>
+
     <script>
         if ('serviceWorker' in navigator) {
             const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
