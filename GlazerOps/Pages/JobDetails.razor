@@ -1,34 +1,44 @@
-@page "/jobs/{jobId:int}"
+@page "/jobs/{jobId:long}"
 @using GlazerOps.Models.Data
+@using GlazerOps.Models.Domain
+@using GlazerOps.Services
 @using Microsoft.AspNetCore.Components
 @using Supabase
+@inject LocalJobsStore LocalJobsStore
 @inject Client SupabaseClient
 
 <PageTitle>Job Details</PageTitle>
 
 <h2>Job Details</h2>
 
-@if (isLoading)
+@if (isLoading && job is null)
 {
     <p>Loading job #@jobId...</p>
 }
-else if (!string.IsNullOrWhiteSpace(errorMessage))
-{
-    <div class="alert alert-danger">@errorMessage</div>
-}
 else if (job is null)
 {
-    <p>Job #@jobId was not found.</p>
+    if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+    else
+    {
+        <p>Job #@jobId was not found.</p>
+    }
 }
 else
 {
+    if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-warning">@errorMessage</div>
+    }
+
     <div class="card mb-3">
         <div class="card-body">
             <h4 class="card-title">@job.JobName</h4>
             <p class="mb-1"><strong>Job ID:</strong> @job.Id</p>
             <p class="mb-1"><strong>PO Number:</strong> @(job.PONumber?.ToString() ?? "—")</p>
-            <p class="mb-1"><strong>Site ID:</strong> @job.SiteId</p>
-            <p class="mb-1"><strong>Owner User ID:</strong> @(job.OwnerUserId?.ToString() ?? "—")</p>
+            <p class="mb-1"><strong>Site ID:</strong> @FormatSiteId(job.SiteId)</p>
             <p class="mb-1"><strong>Site Name:</strong> @(job.Site?.SiteName ?? "—")</p>
             <p class="mb-1"><strong>Address 1:</strong> @(job.Site?.Address1 ?? "—")</p>
             <p class="mb-1"><strong>Address 2:</strong> @(job.Site?.Address2 ?? "—")</p>
@@ -45,9 +55,11 @@ else
 </div>
 
 @code {
-    [Parameter] public int jobId { get; set; }
+    private const int MaxJobs = 20;
 
-    private JobData? job;
+    [Parameter] public long jobId { get; set; }
+
+    private Job? job;
     private bool isLoading;
     private string? errorMessage;
 
@@ -55,23 +67,56 @@ else
     {
         isLoading = true;
         errorMessage = null;
+        job = null;
 
+        await LoadCachedJobAsync();
+
+        if (job is not null)
+        {
+            isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+
+        await RefreshJobFromSupabaseAsync();
+    }
+
+    private async Task LoadCachedJobAsync()
+    {
         try
         {
-            var response = await SupabaseClient
-                .From<JobData>()
-                .Select("id, job_name, po_number, site_id, assigned, contact_ids, site:sites(id, site_name, address_1, address_2)")
-                .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, jobId.ToString())
-                .Limit(1)
-                .Get();
+            var cachedJobs = LocalJobsStore.Jobs.Count > 0
+                ? LocalJobsStore.Jobs
+                : await LocalJobsStore.LoadAsync(MaxJobs);
 
-            job = response.Models?.FirstOrDefault();
+            job = cachedJobs.FirstOrDefault(candidate => candidate.Id == jobId);
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine(ex);
-            errorMessage = $"Failed to load job #{jobId}.";
-            job = null;
+        }
+    }
+
+    private async Task RefreshJobFromSupabaseAsync()
+    {
+        try
+        {
+            var response = await SupabaseClient
+                .From<JobData>()
+                .Select("id, job_name, po_number, site_id, assigned, site:sites(id, site_name, address_1, address_2)")
+                .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, jobId.ToString())
+                .Limit(1)
+                .Get();
+
+            var currentJob = response.Models?.FirstOrDefault();
+            job = currentJob is null ? null : JobMapper.MapToDomain(currentJob);
+            errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex);
+            errorMessage = job is null
+                ? $"Failed to load job #{jobId}."
+                : $"Showing cached job #{jobId}. Failed to refresh current details.";
         }
         finally
         {
@@ -88,4 +133,7 @@ else
 
         return string.Join(", ", values);
     }
+
+    private static string FormatSiteId(long siteId) =>
+        siteId > 0 ? siteId.ToString() : "—";
 }
