@@ -4,8 +4,11 @@
 
 <h3>Login</h3>
 <button @onclick="LoginGoogle">Login with Google</button>
+<p>BaseUri: @Nav.BaseUri</p>
+<p>RedirectTo: @redirectPreview</p>
 
 @code {
+    private string redirectPreview => Nav.BaseUri.TrimEnd('/') + "/auth/callback";
     private async Task LoginGoogle()
     {
         var redirectTo = Nav.BaseUri.TrimEnd('/') + "/auth/callback";
