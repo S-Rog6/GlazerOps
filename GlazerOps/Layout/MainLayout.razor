@@ -4,8 +4,6 @@
 @inject GlazerOps.Services.JobsCacheSyncService JobsCacheSync
 @using MudBlazor
 
-
-
 <div class="page">
     <div class="sidebar">
         <NavMenu />
@@ -23,9 +21,34 @@
 </div>
 
 @code {
-    protected override async Task OnInitializedAsync()
+    private bool _initialized;
+
+    protected override Task OnInitializedAsync()
     {
-        await Sb.Auth.RetrieveSessionAsync();
+        return Task.CompletedTask;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _initialized)
+        {
+            return;
+        }
+
+        _initialized = true;
+        await InitializeSessionAsync();
+    }
+
+    private async Task InitializeSessionAsync()
+    {
+        try
+        {
+            await Sb.Auth.RetrieveSessionAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to restore session during initial layout render: {ex}");
+        }
 
         var relativePath = Nav.ToBaseRelativePath(new Uri(Nav.Uri).GetLeftPart(UriPartial.Path));
         if (Sb.Auth.CurrentUser is null && relativePath != "login" && !relativePath.StartsWith("auth/"))
@@ -38,5 +61,7 @@
         {
             await JobsCacheSync.StartAsync();
         }
+
+        await InvokeAsync(StateHasChanged);
     }
 }
