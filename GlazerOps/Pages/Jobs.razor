@@ -50,8 +50,9 @@
 
 @code {
     private const int MaxJobs = 20;
-    private bool isLoading;
+    private bool isLoading = true;
     private bool isRefreshing;
+    private bool _initialized;
     private string? errorMessage;
     private string filterText = string.Empty;
     private List<JobCardViewData> supabasePreviewJobs = new();
@@ -68,12 +69,29 @@
     protected override async Task OnInitializedAsync()
     {
         LocalJobsStore.Changed += HandleJobsChanged;
-        isLoading = true;
-
         await LoadJobsFromLocalAsync();
-        await JobsCacheSync.StartAsync();
-        await JobsCacheSync.RefreshNowAsync();
-        await LoadSupabasePreviewAsync();
+        isLoading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _initialized)
+        {
+            return;
+        }
+
+        _initialized = true;
+
+        try
+        {
+            await JobsCacheSync.StartAsync();
+            await JobsCacheSync.RefreshNowAsync();
+            await LoadSupabasePreviewAsync();
+        }
+        finally
+        {
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     public void Dispose()
@@ -130,11 +148,6 @@
             errorMessage = string.IsNullOrWhiteSpace(errorMessage)
                 ? "Failed to load Supabase preview rows."
                 : $"{errorMessage} Failed to load Supabase preview rows.";
-        }
-        finally
-        {
-            isLoading = false;
-            await InvokeAsync(StateHasChanged);
         }
     }
 
