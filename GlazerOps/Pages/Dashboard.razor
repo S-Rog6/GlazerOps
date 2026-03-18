@@ -1,7 +1,11 @@
 ﻿@page "/"
+@using GlazerOps.Components
+@using GlazerOps.Models.Domain
+@using GlazerOps.Services
 @using Supabase
 @inject Client Sb
 @inject HttpClient Http
+@inject LocalJobsStore LocalJobsStore
 
 <PageTitle>Dashboard</PageTitle>
 
@@ -15,6 +19,20 @@
     <a class="btn btn-outline-primary" href="/settings">Settings</a>
     <a class="btn btn-outline-primary" href="/users">Users</a>
 </div>
+
+<CardDisplayArea TItem="Job"
+                 Title="Today"
+                 JobIds="TodayJobIds"
+                 IsLoading="isLoading"
+                 EmptyText="No jobs found for today"
+                 ShowSortOptions="false" />
+
+<CardDisplayArea TItem="Job"
+                 Title="Pinned"
+                 JobIds="PinnedJobIds"
+                 IsLoading="isLoading"
+                 EmptyText="No pinned jobs"
+                 ShowSortOptions="false" />
 
 <h3>Supabase Test</h3>
 <p>@_msg</p>
@@ -33,10 +51,24 @@ else
 @code {
     private string _msg = "Loading...";
     private Supabase.Gotrue.User? _user;
+    private bool isLoading;
+
+    private IEnumerable<long> TodayJobIds =>
+        LocalJobsStore.Jobs
+            .Where(IsScheduledForToday)
+            .Select(job => job.Id);
+
+    private IEnumerable<long> PinnedJobIds =>
+        LocalJobsStore.Jobs
+            .Where(job => job.GetPinnedNotes().Any())
+            .Select(job => job.Id);
 
     protected override async Task OnInitializedAsync()
     {
+        isLoading = true;
+        await LocalJobsStore.LoadAsync(50);
         await LoadSupabaseStatusAsync();
+        isLoading = false;
     }
 
     private async Task LoadSupabaseStatusAsync()
@@ -58,5 +90,11 @@ else
 
         await Sb.Auth.RetrieveSessionAsync();
         _user = Sb.Auth.CurrentUser;
+    }
+
+    private static bool IsScheduledForToday(Job job)
+    {
+        var today = DateTime.Today;
+        return job.ScheduledDates.Any(d => d.StartDate.Date == today);
     }
 }

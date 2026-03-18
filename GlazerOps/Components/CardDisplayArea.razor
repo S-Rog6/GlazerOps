@@ -9,7 +9,7 @@
 @inherits ComponentBase
 
 <MudPaper Class="cda">
-    @if (!string.IsNullOrWhiteSpace(Title) || HasTableSupport || OnRefresh.HasDelegate)
+    @if (!string.IsNullOrWhiteSpace(Title) || HasTableSupport || OnRefresh.HasDelegate || ShowSearchBar || ShowSortOptions)
     {
         <div class="cda-header">
             <div class="d-flex justify-content-between align-items-center">
@@ -47,6 +47,28 @@
                     </div>
                 }
             </div>
+
+            @if (ShowSearchBar || ShowSortOptions)
+            {
+                <div class="cda-tools">
+                    @if (ShowSearchBar)
+                    {
+                        <input type="search"
+                               class="form-control cda-search-input"
+                               placeholder="@SearchPlaceholder"
+                               @bind="_searchText"
+                               @bind:event="oninput" />
+                    }
+                    @if (ShowSortOptions)
+                    {
+                        <select class="form-select cda-sort-select" @bind="_sortOption">
+                            <option value="@SortNone">Default</option>
+                            <option value="@SortAscending">A - Z</option>
+                            <option value="@SortDescending">Z - A</option>
+                        </select>
+                    }
+                </div>
+            }
         </div>
     }
 
@@ -85,7 +107,7 @@
         }
         else if (HasJobIds)
         {
-            @if (!MatchedJobs.Any())
+            @if (!DisplayedJobs.Any())
             {
                 <div class="empty-state">
                     <p>@EmptyText</p>
@@ -94,14 +116,14 @@
             else
             {
                 <div class="cards-grid">
-                    @foreach (var job in MatchedJobs)
+                    @foreach (var job in DisplayedJobs)
                     {
                         <JobCard Job="job" />
                     }
                 </div>
             }
         }
-        else if (FilteredItems == null || !FilteredItems.Any() || ChildContent is null)
+        else if (DisplayedItems == null || !DisplayedItems.Any() || ChildContent is null)
         {
             <div class="empty-state">
                 <p>@EmptyText</p>
@@ -110,7 +132,7 @@
         else
         {
             <div class="cards-grid">
-                @foreach (var item in FilteredItems)
+                @foreach (var item in DisplayedItems)
                 {
                     @ChildContent(item)
                 }
@@ -138,6 +160,22 @@
         margin: 0;
         font-size: 1.5em;
         color: darkred;
+    }
+
+    .cda-tools {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 12px;
+    }
+
+    .cda-search-input {
+        max-width: 320px;
+        min-width: 220px;
+    }
+
+    .cda-sort-select {
+        max-width: 180px;
     }
 
     .cda-content {
@@ -225,14 +263,29 @@
     [Parameter]
     public int TableColumnCount { get; set; } = 1;
 
+    [Parameter]
+    public bool ShowSearchBar { get; set; } = true;
+
+    [Parameter]
+    public bool ShowSortOptions { get; set; } = true;
+
+    [Parameter]
+    public string SearchPlaceholder { get; set; } = "Search...";
+
+    private const string SortNone = "none";
+    private const string SortAscending = "asc";
+    private const string SortDescending = "desc";
+
     private bool _showTableView = false;
+    private string _searchText = string.Empty;
+    private string _sortOption = SortNone;
 
     private bool HasTableSupport => TableHeader is not null || TableRow is not null;
 
     private IEnumerable<TItem> TableItems =>
         HasJobIds
-            ? MatchedJobs.Cast<TItem>()
-            : (FilteredItems ?? Enumerable.Empty<TItem>());
+            ? DisplayedJobs.Cast<TItem>()
+            : (DisplayedItems ?? Enumerable.Empty<TItem>());
 
     private bool HasJobIds => JobIds is not null;
 
@@ -248,14 +301,62 @@
                     (id, job) => job)
                 .ToList();
 
+    private IEnumerable<DomainJob> DisplayedJobs =>
+        ApplyJobSort(ApplyJobSearch(ApplyJobSearch(MatchedJobs, CardFilter), _searchText));
+
     private IEnumerable<TItem>? EffectiveItems =>
         Items ?? (typeof(TItem) == typeof(DomainJob) ? LocalJobsStore.Jobs.Cast<TItem>() : null);
 
-    private IEnumerable<TItem>? FilteredItems =>
-        EffectiveItems == null ? null :
-        string.IsNullOrWhiteSpace(CardFilter) ? EffectiveItems :
-        FilterFunc != null ? EffectiveItems.Where(item => FilterFunc(item, CardFilter)) :
-        EffectiveItems;
+    private IEnumerable<TItem>? DisplayedItems =>
+        EffectiveItems == null
+            ? null
+            : ApplyItemSort(ApplyItemSearch(ApplyItemSearch(EffectiveItems, CardFilter), _searchText));
+
+    private IEnumerable<DomainJob> ApplyJobSearch(IEnumerable<DomainJob> jobs, string searchTerm)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            return jobs;
+        }
+
+        var term = searchTerm.Trim();
+        return jobs.Where(job =>
+            job.JobName.Contains(term, StringComparison.OrdinalIgnoreCase)
+            || job.PONumber?.ToString().Contains(term, StringComparison.OrdinalIgnoreCase) == true
+            || job.Site?.SiteName?.Contains(term, StringComparison.OrdinalIgnoreCase) == true);
+    }
+
+    private IEnumerable<DomainJob> ApplyJobSort(IEnumerable<DomainJob> jobs) =>
+        _sortOption switch
+        {
+            SortAscending => jobs.OrderBy(job => job.JobName).ThenBy(job => job.Id),
+            SortDescending => jobs.OrderByDescending(job => job.JobName).ThenByDescending(job => job.Id),
+            _ => jobs
+        };
+
+    private IEnumerable<TItem> ApplyItemSearch(IEnumerable<TItem> items, string searchTerm)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            return items;
+        }
+
+        if (FilterFunc is not null)
+        {
+            return items.Where(item => FilterFunc(item, searchTerm));
+        }
+
+        var term = searchTerm.Trim();
+        return items.Where(item => item?.ToString()?.Contains(term, StringComparison.OrdinalIgnoreCase) == true);
+    }
+
+    private IEnumerable<TItem> ApplyItemSort(IEnumerable<TItem> items) =>
+        _sortOption switch
+        {
+            SortAscending => items.OrderBy(item => item?.ToString()),
+            SortDescending => items.OrderByDescending(item => item?.ToString()),
+            _ => items
+        };
 
     private Task TriggerRefreshAsync() =>
         OnRefresh.HasDelegate ? OnRefresh.InvokeAsync() : Task.CompletedTask;
