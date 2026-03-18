@@ -15,16 +15,23 @@
         </div>
 
         <article class="content px-4">
-            @Body
+            @if (_sessionChecked || _isPublicRoute)
+            {
+                @Body
+            }
         </article>
     </main>
 </div>
 
 @code {
     private bool _initialized;
+    private bool _sessionChecked;
+    private bool _isPublicRoute;
 
     protected override Task OnInitializedAsync()
     {
+        var relativePath = Nav.ToBaseRelativePath(new Uri(Nav.Uri).GetLeftPart(UriPartial.Path));
+        _isPublicRoute = relativePath == "login" || relativePath.StartsWith("auth/");
         return Task.CompletedTask;
     }
 
@@ -62,6 +69,7 @@
             await JobsCacheSync.StartAsync();
         }
 
+        _sessionChecked = true;
         await InvokeAsync(StateHasChanged);
     }
 }
