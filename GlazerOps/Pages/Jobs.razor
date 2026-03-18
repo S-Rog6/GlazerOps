@@ -17,18 +17,7 @@
     <div class="alert alert-danger">@errorMessage</div>
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <div class="btn-group" role="group">
-        <a class="btn btn-outline-secondary" href="/jobs/editor">Job Entry / Editor</a>
-        <a class="btn btn-outline-secondary" href="/jobs/1">Job Details</a>
-        <a class="btn btn-outline-secondary" href="/jobs/1/notes">Job Notes</a>
-        <a class="btn btn-outline-secondary" href="/jobs/1/plans">Job Plans</a>
-        <a class="btn btn-outline-secondary" href="/jobs/1/gallery">Job Gallery</a>
-    </div>
-</div>
-
 <CardDisplayArea TItem="Job"
-                 Title="Jobs View"
                  JobIds="FilteredJobIds"
                  IsLoading="isLoading"
                  IsRefreshing="isRefreshing"

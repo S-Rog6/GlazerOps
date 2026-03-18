@@ -11,7 +11,7 @@
     <MudCardContent>
         <div class="jc_summary" @onclick="NavigateToJobDetails">
             <div class="jc_leftside">
-                <p class="jc_header">@DisplayJobName</p>
+                <p class="jc_header"><strong>@DisplayJobName</strong></p>
                 <p class="jc_poNumber">@DisplayPONumber</p>
                 <p class="jc_contacts">
                     @if (!string.IsNullOrWhiteSpace(DisplayPrimaryContacts))
@@ -109,9 +109,10 @@
 
     .jc_header {
         margin: 0 0 8px 0;
-        font-size: 1.25em;
-        color: #c00;
+        font-size: 1.5em;
+        color: maroon;
         overflow-wrap: anywhere;
+
     }
 
     .jc_poNumber,
