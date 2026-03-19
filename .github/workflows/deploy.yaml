@@ -40,7 +40,7 @@ jobs:
             "GlazerOps/bin/Release/net10.0/browser-wasm/publish" \
             "GlazerOps/bin/Release/net10.0/publish/wwwroot" \
             "GlazerOps/bin/Release/net10.0/publish"; do
-            if [[ -f "$candidate/index.html" && -f "$candidate/_framework/blazor.webassembly.js" ]]; then
+            if [[ -f "$candidate/index.html" ]] && compgen -G "$candidate/_framework/blazor.webassembly*.js" > /dev/null 2>&1; then
               publish_dir="$candidate"
               break
             fi
