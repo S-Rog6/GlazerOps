@@ -28,16 +28,37 @@ jobs:
           dotnet-version: "10.0.x"
 
       - name: Publish Blazor
-        run: |
-          dotnet publish GlazerOps/GlazerOps.csproj -c Release -o release
+        run: dotnet publish GlazerOps/GlazerOps.csproj -c Release
 
-      - name: Disable Jekyll
-        run: touch release/wwwroot/.nojekyll
+      - name: Prepare Pages artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          publish_dir=""
+          for candidate in \
+            "GlazerOps/bin/Release/net10.0/browser-wasm/publish" \
+            "GlazerOps/bin/Release/net10.0/publish/wwwroot" \
+            "GlazerOps/bin/Release/net10.0/publish"; do
+            if [[ -f "$candidate/index.html" && -f "$candidate/_framework/blazor.webassembly.js" ]]; then
+              publish_dir="$candidate"
+              break
+            fi
+          done
+
+          if [[ -z "$publish_dir" ]]; then
+            echo "Unable to locate published site assets. Checked expected publish folders under GlazerOps/bin/Release/net10.0." >&2
+            exit 1
+          fi
+
+          mkdir -p release
+          cp -R "$publish_dir"/. release/
+          touch release/.nojekyll
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: release/wwwroot
+          path: release
 
   deploy:
     needs: build
