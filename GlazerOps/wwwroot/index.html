@@ -69,7 +69,7 @@
         })();
     </script>
 
-    <script type="module" src="_framework/blazor.webassembly.js" autostart="false"></script>
+    <script src="_framework/blazor.webassembly.js" autostart="false" defer></script>
 
     <script>
         if ('serviceWorker' in navigator) {
@@ -139,14 +139,23 @@
                 showBootFailure(message);
             });
 
-            Blazor.start()
-                .then(function () {
-                    clearTimeout(loadingTimer);
-                })
-                .catch(function (error) {
+            function startBlazor() {
+                if (!window.Blazor || typeof window.Blazor.start !== 'function') {
+                    throw new Error('Blazor runtime failed to load. Please refresh and try again.');
+                }
+
+                return window.Blazor.start()
+                    .then(function () {
+                        clearTimeout(loadingTimer);
+                    });
+            }
+
+            window.addEventListener('load', function () {
+                startBlazor().catch(function (error) {
                     var message = error && error.message ? error.message : 'Application startup failed.';
                     showBootFailure(message);
                 });
+            }, { once: true });
         })();
     </script>
 </body>
