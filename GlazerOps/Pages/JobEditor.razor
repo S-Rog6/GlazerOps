@@ -1,20 +1,220 @@
 @page "/jobs/editor"
-@page "/jobs/{jobId:int}/edit"
+@page "/jobs/{jobId:long}/edit"
+@using GlazerOps.Models.Data
+@using GlazerOps.Models.Domain
+@using GlazerOps.Services
 @using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+@using Supabase
+@inject LocalJobsStore LocalJobsStore
+@inject Client SupabaseClient
 
 <PageTitle>Job Entry / Editor</PageTitle>
 
 <h2>Job Entry / Editor</h2>
 
-@if (jobId.HasValue)
+@if (isLoading)
 {
-    <p>Editing job #@jobId.Value.</p>
+    <p>@loadingMessage</p>
 }
 else
 {
-    <p>Creating a new job.</p>
+    if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-warning">@errorMessage</div>
+    }
+
+    if (!string.IsNullOrWhiteSpace(statusMessage))
+    {
+        <div class="alert alert-info">@statusMessage</div>
+    }
+
+    <EditForm Model="editor" OnValidSubmit="HandleSaveAsync">
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="job-id">Job ID</label>
+                        <InputText id="job-id" class="form-control" @bind-Value="editor.JobId" readonly />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="po-number">PO Number</label>
+                        <InputText id="po-number" class="form-control" @bind-Value="editor.PONumber" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="job-name">Job Name</label>
+                        <InputText id="job-name" class="form-control" @bind-Value="editor.JobName" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="site-id">Site ID</label>
+                        <InputText id="site-id" class="form-control" @bind-Value="editor.SiteId" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="site-name">Site Name</label>
+                        <InputText id="site-name" class="form-control" @bind-Value="editor.SiteName" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="address-1">Address 1</label>
+                        <InputText id="address-1" class="form-control" @bind-Value="editor.Address1" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="address-2">Address 2</label>
+                        <InputText id="address-2" class="form-control" @bind-Value="editor.Address2" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="assigned">Assigned</label>
+                        <InputTextArea id="assigned"
+                                       class="form-control"
+                                       rows="3"
+                                       placeholder="Enter assigned team members, separated by commas"
+                                       @bind-Value="editor.Assigned" />
+                        <div class="form-text">Use commas to separate multiple assigned values.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap">
+            <button type="submit" class="btn btn-primary">Save Job</button>
+            <a class="btn btn-outline-secondary" href="@GetCancelHref()">Cancel</a>
+        </div>
+    </EditForm>
 }
 
 @code {
-    [Parameter] public int? jobId { get; set; }
+    private const int MaxJobs = 20;
+
+    [Parameter] public long? jobId { get; set; }
+
+    private readonly JobEditorModel editor = new();
+    private bool isLoading = true;
+    private string? errorMessage;
+    private string? statusMessage;
+
+    private string loadingMessage => jobId.HasValue
+        ? $"Loading job #{jobId.Value} for editing..."
+        : "Preparing a new job entry form...";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        errorMessage = null;
+        statusMessage = null;
+        isLoading = true;
+        ResetEditor();
+
+        if (jobId.HasValue)
+        {
+            await LoadCachedJobAsync(jobId.Value);
+            await RefreshJobFromSupabaseAsync(jobId.Value);
+        }
+        else
+        {
+            statusMessage = "Creating a new job. Fill out the fields below.";
+        }
+
+        isLoading = false;
+    }
+
+    private async Task LoadCachedJobAsync(long id)
+    {
+        try
+        {
+            var cachedJobs = LocalJobsStore.Jobs.Count > 0
+                ? LocalJobsStore.Jobs
+                : await LocalJobsStore.LoadAsync(MaxJobs);
+
+            var cachedJob = cachedJobs.FirstOrDefault(candidate => candidate.Id == id);
+            if (cachedJob is not null)
+            {
+                PopulateEditor(cachedJob);
+                statusMessage = $"Loaded cached values for job #{id}.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex);
+        }
+    }
+
+    private async Task RefreshJobFromSupabaseAsync(long id)
+    {
+        try
+        {
+            var response = await SupabaseClient
+                .From<JobData>()
+                .Select("id, job_name, po_number, site_id, assigned, site:sites(id, site_name, address_1, address_2)")
+                .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, id.ToString())
+                .Limit(1)
+                .Get();
+
+            var currentJob = response.Models?.FirstOrDefault();
+            if (currentJob is null)
+            {
+                if (string.IsNullOrWhiteSpace(editor.JobId))
+                {
+                    errorMessage = $"Job #{id} was not found.";
+                }
+
+                return;
+            }
+
+            PopulateEditor(JobMapper.MapToDomain(currentJob));
+            statusMessage = $"Loaded current values for job #{id}.";
+            errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex);
+            errorMessage = string.IsNullOrWhiteSpace(editor.JobId)
+                ? $"Failed to load job #{id}."
+                : $"Showing cached values for job #{id}. Failed to refresh current details.";
+        }
+    }
+
+    private Task HandleSaveAsync()
+    {
+        statusMessage = "Job save is not wired up yet. The editor fields are ready for data entry.";
+        return Task.CompletedTask;
+    }
+
+    private void PopulateEditor(Job job)
+    {
+        editor.JobId = job.Id > 0 ? job.Id.ToString() : string.Empty;
+        editor.PONumber = job.PONumber?.ToString() ?? string.Empty;
+        editor.JobName = job.JobName;
+        editor.SiteId = job.SiteId > 0 ? job.SiteId.ToString() : string.Empty;
+        editor.SiteName = job.Site?.SiteName ?? string.Empty;
+        editor.Address1 = job.Site?.Address1 ?? string.Empty;
+        editor.Address2 = job.Site?.Address2 ?? string.Empty;
+        editor.Assigned = job.Assigned.Length > 0
+            ? string.Join(", ", job.Assigned)
+            : string.Empty;
+    }
+
+    private void ResetEditor()
+    {
+        editor.JobId = string.Empty;
+        editor.PONumber = string.Empty;
+        editor.JobName = string.Empty;
+        editor.SiteId = string.Empty;
+        editor.SiteName = string.Empty;
+        editor.Address1 = string.Empty;
+        editor.Address2 = string.Empty;
+        editor.Assigned = string.Empty;
+    }
+
+    private string GetCancelHref() =>
+        jobId.HasValue ? $"/jobs/{jobId.Value}" : "/jobs";
+
+    private sealed class JobEditorModel
+    {
+        public string JobId { get; set; } = string.Empty;
+        public string PONumber { get; set; } = string.Empty;
+        public string JobName { get; set; } = string.Empty;
+        public string SiteId { get; set; } = string.Empty;
+        public string SiteName { get; set; } = string.Empty;
+        public string Address1 { get; set; } = string.Empty;
+        public string Address2 { get; set; } = string.Empty;
+        public string Assigned { get; set; } = string.Empty;
+    }
 }
