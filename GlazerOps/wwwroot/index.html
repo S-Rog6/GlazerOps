@@ -49,7 +49,7 @@
             <circle r="40%" cx="50%" cy="50%" />
             <circle r="40%" cx="50%" cy="50%" />
         </svg>
-        <div class="loading-progress-text"></div>
+        <div class="loading-progress-text" data-loading-text="Preparing GlazerOps…"></div>
     </div>
 
     <div id="blazor-error-ui">
@@ -69,20 +69,85 @@
         })();
     </script>
 
-    <script type="module" src="_framework/blazor.webassembly.js"></script>
+    <script type="module" src="_framework/blazor.webassembly.js" autostart="false"></script>
 
     <script>
         if ('serviceWorker' in navigator) {
             const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            const isGitHubPages = location.hostname.endsWith('github.io');
 
-            if (isLocalhost) {
+            if (isLocalhost || isGitHubPages) {
                 navigator.serviceWorker.getRegistrations().then(registrations => {
                     registrations.forEach(registration => registration.unregister());
                 });
+
+                if ('caches' in window) {
+                    caches.keys().then(keys => {
+                        keys.forEach(key => caches.delete(key));
+                    });
+                }
             } else {
                 navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });
             }
         }
+    </script>
+
+    <script>
+        (function () {
+            var loadingText = document.querySelector('.loading-progress-text');
+            var loadingTimer;
+
+            function updateLoadingText(message) {
+                if (!loadingText) {
+                    return;
+                }
+
+                loadingText.setAttribute('data-loading-text', message);
+            }
+
+            function showBootFailure(message) {
+                clearTimeout(loadingTimer);
+
+                var app = document.getElementById('app');
+                if (!app) {
+                    return;
+                }
+
+                app.innerHTML =
+                    '<div class="loading-failure">' +
+                    '<h2>Unable to start GlazerOps</h2>' +
+                    '<p>' + message + '</p>' +
+                    '<p>Try a hard refresh. On GitHub Pages, stale cached assets can block the first load after deployment.</p>' +
+                    '</div>';
+            }
+
+            updateLoadingText('Loading application…');
+
+            loadingTimer = window.setTimeout(function () {
+                updateLoadingText('Still loading… checking cached assets');
+            }, 8000);
+
+            window.addEventListener('error', function (event) {
+                if (event && event.message) {
+                    showBootFailure(event.message);
+                }
+            });
+
+            window.addEventListener('unhandledrejection', function (event) {
+                var reason = event && event.reason;
+                var message = reason && reason.message ? reason.message : 'Application startup failed.';
+                showBootFailure(message);
+            });
+
+            Blazor.start()
+                .then(function () {
+                    clearTimeout(loadingTimer);
+                })
+                .catch(function (error) {
+                    var message = error && error.message ? error.message : 'Application startup failed.';
+                    showBootFailure(message);
+                });
+        })();
     </script>
 </body>
 
